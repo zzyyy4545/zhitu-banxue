@@ -21,6 +21,8 @@ const PID_FILE = path.join(ROOT, 'data', 'serveo.pid');
 const URL_FILE = path.join(ROOT, 'data', 'serveo-url.txt');
 
 const KEY = path.join(ROOT, '.ssh', 'id_lhr');
+// serveo 保留子域名的正确写法：只写前缀（如 zhitu2026），它会自动映射到
+// zhitu2026.serveousercontent.com；写成完整域名会报 remote port forwarding failed
 const SUBDOMAIN = 'zhitu2026';
 const REMOTE = 'serveo.net';
 
@@ -51,7 +53,7 @@ function start() {
     '-o', 'ServerAliveCountMax=3',
     '-o', 'StrictHostKeyChecking=no',
     '-o', 'UserKnownHostsFile=/dev/null',
-    '-R', `${SUBDOMAIN}:80:localhost:3000`,
+    '-R', `${SUBDOMAIN}:80:127.0.0.1:3000`,
     REMOTE,
   ], {
     cwd: ROOT,

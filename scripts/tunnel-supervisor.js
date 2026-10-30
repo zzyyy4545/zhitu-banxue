@@ -63,7 +63,7 @@ function start() {
       '-o', 'ServerAliveCountMax=3',
       '-o', 'ExitOnForwardFailure=yes',
       '-o', 'TCPKeepAlive=yes',
-      '-R', `80:localhost:${LOCAL_PORT}`,
+      '-R', `80:127.0.0.1:${LOCAL_PORT}`,
       'nokey@localhost.run',
     ],
     { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true }
