@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>知途伴学 · 管理后台</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="app">
+  <div class="topbar" id="topbar"></div>
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-tab="ov">系统概览</button>
+    <button class="tab" data-tab="llm">模型与成本</button>
+    <button class="tab" data-tab="red">红线规则</button>
+    <button class="tab" data-tab="pv">提示词版本</button>
+    <button class="tab" data-tab="cls">班级与账号</button>
+    <button class="tab" data-tab="audit">审计日志</button>
+  </div>
+
+  <div class="main">
+    <div class="pane on" id="pane-ov"><div class="card"><h3>系统概览</h3><div id="ov"></div></div></div>
+
+    <div class="pane" id="pane-llm">
+      <div class="grid g2">
+        <div class="card"><h3>模型接入<span class="sub">未配置时使用内置规则引擎</span></h3>
+          <div class="fld"><label>启用大模型</label><select id="l-en"><option value="0">否（规则引擎）</option><option value="1">是</option></select></div>
+          <div class="fld"><label>接口地址（Base URL）</label><input id="l-url" placeholder="https://api.example.com/v1"></div>
+          <div class="fld"><label>API Key</label><input id="l-key" type="password" placeholder="sk-..."></div>
+          <div class="fld"><label>强模型（导学对话）</label><input id="l-strong" placeholder="如 gpt-4o / qwen-max"></div>
+          <div class="fld"><label>轻量模型（简单查询）</label><input id="l-light" placeholder="如 gpt-4o-mini / qwen-plus"></div>
+          <div class="fld"><label>超时（毫秒）</label><input id="l-timeout" value="15000"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn sm" id="btn-llm">保存配置</button>
+            <button class="btn sm gh" id="btn-llm-test">测试连接</button>
+            <button class="btn sm gh" id="btn-llm-models">拉取模型列表</button>
+          </div>
+          <div id="llm-out" class="faint mt12"></div>
+          <div class="faint mt12">失败自动回落规则引擎，绝不静默失败；对话内容不用于模型训练需在供应商侧确认。<br>未填 API Key 时，测试/拉取沿用已保存的密钥。</div>
+        </div>
+        <div class="card"><h3>成本与缓存<span class="sub">FR-702</span></h3><div id="cost"></div></div>
+        <div class="card">
+          <h3>模型调用留痕<span class="sub">逐条证明是否真的走了模型</span>
+            <button class="btn sm gh" id="btn-calls" style="float:right">刷新</button></h3>
+          <div id="calls-stat" class="faint"></div>
+          <div id="calls" class="mt12"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-red">
+      <div class="card">
+        <h3>答案红线规则库<span class="sub">可配置 · 热更新 · 独立于模型</span></h3>
+        <div id="rules"></div>
+        <div class="grid g2 mt12">
+          <div class="card" style="background:#FCFCFB">
+            <h3>新增规则</h3>
+            <div class="fld"><label>名称</label><input id="r-name" placeholder="如：禁止输出完整 SQL 脚本"></div>
+            <div class="fld"><label>类型</label>
+              <select id="r-kind">
+                <option value="regex">regex 正则匹配</option>
+                <option value="code_lines">code_lines 代码块行数</option>
+                <option value="count">count 出现次数</option>
+                <option value="doc_struct">doc_struct 成篇结构</option>
+              </select></div>
+            <div class="fld"><label>参数（JSON）</label><input id="r-param" value='{"pattern":"...","flags":""}'></div>
+            <div class="fld"><label>生效阶段（留空=全部）</label><input id="r-stage" placeholder="requirements"></div>
+            <div class="fld"><label>生效层级上限（≤此层级拦截）</label><input id="r-max" value="3"></div>
+            <div class="fld"><label>拦截后替换话术</label><textarea id="r-rep" rows="2"></textarea></div>
+            <button class="btn sm" id="btn-rule">新增</button>
+          </div>
+          <div class="card" style="background:#FCFCFB">
+            <h3>类型参数说明</h3>
+            <ul style="margin-left:18px;font-size:12.5px" class="muted">
+              <li><code>regex</code>：{"pattern":"正则","flags":"i"}</li>
+              <li><code>code_lines</code>：{"maxLines":15}</li>
+              <li><code>count</code>：{"pattern":"@Test","min":2}</li>
+              <li><code>doc_struct</code>：{"minLength":600,"minHeadings":3}</li>
+            </ul>
+            <div class="note mt12">L4（或教师解锁后）自动放行；所有拦截写入审计日志并计入教师端「越界尝试」。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-pv">
+      <div class="card"><h3>提示词版本库<span class="sub">FR-605 灰度与回滚</span></h3><div id="pvs"></div>
+        <div class="grid g2 mt12">
+          <div class="card" style="background:#FCFCFB"><h3>发布新版本</h3>
+            <div class="fld"><label>类型</label><select id="p-kind"><option value="tutor">tutor 导学</option><option value="guardrail">guardrail 护栏</option></select></div>
+            <div class="fld"><label>名称</label><input id="p-name" placeholder="导学 Agent v1.1"></div>
+            <div class="fld"><label>内容</label><textarea id="p-content" rows="6" placeholder="支持 {stage} {current_level} {cap_level} 等占位符"></textarea></div>
+            <div class="fld"><label>发布方式</label><select id="p-status"><option value="gray">灰度（指定班级）</option><option value="active">全局生效</option></select></div>
+            <div class="fld"><label>灰度班级（逗号分隔）</label><input id="p-gray" placeholder="SE-2026-A"></div>
+            <button class="btn sm" id="btn-pv">发布</button>
+          </div>
+          <div class="card" style="background:#FCFCFB"><h3>说明</h3>
+            <div class="faint">每次对话都会记录所用提示词版本与模型版本，任一条历史对话可还原其生成时的完整配置。回滚会把当前生效版本归档。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-cls">
+      <div class="grid g2">
+        <div class="card"><h3>班级<span class="sub">FR-701</span></h3><div id="classes"></div>
+          <div class="rowflex mt12">
+            <input id="c-id" placeholder="班级 ID" style="flex:1;border:1px solid var(--bd);border-radius:8px;padding:7px 10px">
+            <input id="c-name" placeholder="班级名称" style="flex:1;border:1px solid var(--bd);border-radius:8px;padding:7px 10px">
+            <button class="btn sm" id="btn-cls">新增</button>
+          </div>
+        </div>
+        <div class="card"><h3>学生 CSV 导入<span class="sub">降级通道</span></h3>
+          <textarea id="imp" rows="8" placeholder='每行一条，或粘贴 JSON 数组：[{"studentId":"...","name":"...","classId":"...","groupId":"..."}]'></textarea>
+          <button class="btn sm mt12" id="btn-imp">导入</button>
+          <div id="imp-res" class="mt12"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-audit">
+      <div class="card"><h3>审计日志<span class="sub">FR-703 不可篡改</span></h3><div id="audit"></div></div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+var U = ZT.guard(['admin','teacher']);
+if (!U) throw new Error('unauthorized');
+
+async function boot(){
+  ZT.topbar('知途伴学 · 管理后台', U, '<span class="pill n">运维</span>');
+  ZT.tabs('tabs', function(k){
+    ({ov:loadOv, llm:loadLlm, red:loadRules, pv:loadPv, cls:loadCls, audit:loadAudit})[k]();
+  });
+  document.getElementById('btn-llm').onclick = saveLlm;
+  document.getElementById('btn-llm-test').onclick = testLlm;
+  document.getElementById('btn-llm-models').onclick = fetchModels;
+  document.getElementById('btn-calls').onclick = loadCalls;
+  document.getElementById('btn-rule').onclick = addRule;
+  document.getElementById('btn-pv').onclick = publishPv;
+  document.getElementById('btn-cls').onclick = addClass;
+  document.getElementById('btn-imp').onclick = doImport;
+  loadOv();
+}
+
+async function loadOv(){
+  try{
+    var r = await ZT.get('/api/v1/admin/overview');
+    var c = r.counts;
+    document.getElementById('ov').innerHTML = '<div class="mets">'+
+      Object.keys(c).map(function(k){
+        var names = {students:'学生',groups:'小组',classes:'班级',sessions:'会话',helpEvents:'求助事件',
+          artifacts:'产出物',knowledgeNodes:'知识点',alerts:'预警',pendingAlerts:'待处理预警',auditLogs:'审计日志',guardrailLogs:'护栏日志'};
+        return '<div class="met"><b>'+c[k]+'</b><span>'+(names[k]||k)+'</span></div>';
+      }).join('')+'</div>'+
+      '<div class="faint mt12">数据库：'+ZT.esc(r.dbFile)+' · 模型：'+(r.llmEnabled?'已启用':'规则引擎')+
+      ' · 缓存命中率：'+r.cache.rate+'（命中 '+r.cache.hit+' / 未命中 '+r.cache.miss+'）</div>';
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function loadLlm(){
+  try{
+    var r = await ZT.get('/api/v1/admin/llm');
+    document.getElementById('l-en').value = r.enabled ? '1' : '0';
+    document.getElementById('l-url').value = r.config.baseUrl || '';
+    document.getElementById('l-key').value = '';
+    document.getElementById('l-strong').value = r.config.strongModel || '';
+    document.getElementById('l-light').value = r.config.lightModel || '';
+    document.getElementById('l-timeout').value = r.config.timeoutMs || 15000;
+
+    var cost = await ZT.get('/api/v1/admin/cost');
+    document.getElementById('cost').innerHTML = cost.daily.length
+      ? '<div class="tbl-wrap"><table><thead><tr><th>日期</th><th>引擎</th><th>调用</th><th>缓存命中</th><th>降级</th><th>平均耗时</th></tr></thead><tbody>'+
+        cost.daily.map(function(d){
+          return '<tr><td>'+d.d+'</td><td>'+d.engine+'</td><td>'+d.calls+'</td><td>'+d.cached+'</td><td>'+d.fallbacks+'</td><td>'+Math.round(d.avg_latency||0)+'ms</td></tr>';
+        }).join('')+'</tbody></table></div>'
+      : '<div class="empty">暂无调用记录（当前为规则引擎，不产生模型成本）</div>';
+    loadCalls();
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+/** 最近模型调用明细：判定「大模型是否真的生效」的最硬证据 */
+async function loadCalls(){
+  var box = document.getElementById('calls');
+  var sb = document.getElementById('calls-stat');
+  if (!box) return;
+  try{
+    var r = await ZT.get('/api/v1/admin/llm/calls?limit=30');
+    var s = r.stat || {};
+    sb.innerHTML = '累计 <b>'+(s.total||0)+'</b> 次调用 · 其中大模型 <b>'+(s.llmCalls||0)+'</b> 次 · 降级 <b>'+(s.fallbacks||0)+
+      '</b> 次 · 缓存命中 <b>'+(s.cached||0)+'</b> 次 · 累计 token <b>'+((s.pt||0)+(s.ct||0))+'</b>（提示 '+ (s.pt||0) +' / 生成 '+(s.ct||0)+'）';
+    if (!r.items.length){ box.innerHTML = '<div class="empty">暂无明细</div>'; return; }
+    box.innerHTML = '<div class="tbl-wrap"><table><thead><tr>'+
+      '<th>时间</th><th>引擎</th><th>模型</th><th>档位</th><th>耗时</th><th>token</th><th>状态</th><th>学生</th>'+
+      '</tr></thead><tbody>'+
+      r.items.map(function(c){
+        var st = c.fallback ? '<span style="color:#A32D2D">降级</span>'
+          : c.cached ? '<span style="color:#534AB7">缓存</span>'
+          : c.engine === 'llm' ? '<span style="color:#3B6D11">成功</span>' : '<span class="muted">规则</span>';
+        return '<tr><td>'+ZT.ts(c.created_at)+'</td><td>'+ZT.esc(c.engine)+'</td><td>'+ZT.esc(c.model||'-')+
+          '</td><td>'+ZT.esc(c.tier||'-')+'</td><td>'+(c.latency_ms||0)+'ms</td><td>'+
+          ((c.prompt_tokens||0)+(c.completion_tokens||0))+'</td><td>'+st+'</td><td>'+ZT.esc(c.student_id||'-')+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+  }catch(e){ box.innerHTML = '<div class="empty">'+ZT.esc(e.message)+'</div>'; }
+}
+
+/* 表单里的当前值；API Key 留空表示沿用已保存的密钥 */
+function llmForm(){
+  var k = document.getElementById('l-key').value.trim();
+  return {
+    baseUrl: document.getElementById('l-url').value.trim() || undefined,
+    strongModel: document.getElementById('l-strong').value.trim() || undefined,
+    apiKey: k || undefined
+  };
+}
+
+async function testLlm(){
+  var out = document.getElementById('llm-out');
+  out.textContent = '正在测试连接…';
+  try{
+    var r = await ZT.post('/api/v1/admin/llm/test', llmForm());
+    if (r.ok){
+      out.innerHTML = '<span style="color:#3B6D11">连接成功</span> · '+r.latencyMs+'ms · 模型 <b>'+ZT.esc(r.model)+
+        '</b><br>网关返回：'+ZT.esc(r.sample)+'<br>地址：'+ZT.esc(r.base)+' · 可用模型 '+r.modelCount+' 个';
+      if (r.model && !document.getElementById('l-strong').value.trim()){
+        document.getElementById('l-strong').value = r.model;
+      }
+    } else {
+      out.innerHTML = '<span style="color:#A32D2D">连接失败</span>：'+ZT.esc(r.error)+
+        '<br>已配置地址：'+ZT.esc(r.base || '（空）');
+    }
+  }catch(e){ out.textContent = '测试失败：'+e.message; }
+}
+
+async function fetchModels(){
+  var out = document.getElementById('llm-out');
+  out.textContent = '正在拉取模型列表…';
+  try{
+    var r = await ZT.post('/api/v1/admin/llm/models', llmForm());
+    if (!r.count){ out.textContent = '网关未返回模型，请检查地址与 Key 权限'; return; }
+    out.innerHTML = '共 '+r.count+' 个模型（点击填入「强模型」）：<div style="margin-top:6px">'+
+      r.models.map(function(m){
+        return '<button class="btn sm gh" data-m="'+ZT.esc(m)+'" style="margin:2px">'+ZT.esc(m)+'</button>';
+      }).join('')+'</div>';
+    out.querySelectorAll('button[data-m]').forEach(function(b){
+      b.onclick = function(){ document.getElementById('l-strong').value = b.dataset.m; ZT.toast('已填入：'+b.dataset.m,'ok'); };
+    });
+  }catch(e){ out.textContent = '拉取失败：'+e.message; }
+}
+
+async function saveLlm(){
+  var body = {
+    enabled: document.getElementById('l-en').value === '1',
+    baseUrl: document.getElementById('l-url').value.trim(),
+    strongModel: document.getElementById('l-strong').value.trim(),
+    lightModel: document.getElementById('l-light').value.trim(),
+    timeoutMs: parseInt(document.getElementById('l-timeout').value,10) || 15000,
+    cacheEnabled: true
+  };
+  var k = document.getElementById('l-key').value.trim();
+  if (k) body.apiKey = k;
+  try{ await ZT.put('/api/v1/admin/llm', body); ZT.toast('配置已保存','ok'); loadLlm(); }
+  catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function loadRules(){
+  try{
+    var r = await ZT.get('/api/v1/admin/redline');
+    document.getElementById('rules').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>规则</th><th>类型</th><th>阶段</th><th>拦截层级</th><th>状态</th><th>操作</th></tr></thead><tbody>'+
+      r.rules.map(function(x){
+        return '<tr><td><b>'+ZT.esc(x.name)+'</b><br><span class="faint">'+ZT.esc(x.reason_code)+'</span></td>'+
+          '<td>'+ZT.esc(x.kind)+'</td><td>'+ZT.esc(x.stage||'全部')+'</td><td>≤ L'+x.max_level+'</td>'+
+          '<td>'+(x.enabled? '<span class="pill g">启用</span>' : '<span class="pill n">停用</span>')+'</td>'+
+          '<td><button class="btn gh sm" data-id="'+x.rule_id+'" data-en="'+x.enabled+'">'+(x.enabled?'停用':'启用')+'</button></td></tr>';
+      }).join('')+'</tbody></table></div>';
+    document.querySelectorAll('#rules button[data-id]').forEach(function(b){
+      b.onclick = async function(){
+        await ZT.put('/api/v1/admin/redline/'+b.dataset.id, { enabled: b.dataset.en === '1' ? 0 : 1 });
+        ZT.toast('已更新','ok'); loadRules();
+      };
+    });
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function addRule(){
+  var body = {
+    name: document.getElementById('r-name').value.trim(),
+    kind: document.getElementById('r-kind').value,
+    param: JSON.parse(document.getElementById('r-param').value || '{}'),
+    stage: document.getElementById('r-stage').value.trim() || null,
+    maxLevel: parseInt(document.getElementById('r-max').value,10) || 3,
+    replacement: document.getElementById('r-rep').value.trim() || null
+  };
+  if (!body.name){ ZT.toast('请填写规则名称','err'); return; }
+  try{ await ZT.post('/api/v1/admin/redline', body); ZT.toast('规则已新增（立即生效）','ok'); loadRules(); }
+  catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function loadPv(){
+  try{
+    var r = await ZT.get('/api/v1/admin/prompts');
+    document.getElementById('pvs').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>类型</th><th>名称</th><th>状态</th><th>灰度范围</th><th>创建时间</th><th>操作</th></tr></thead><tbody>'+
+      r.versions.map(function(v){
+        var stCls = v.status==='active' ? 'g' : (v.status==='gray' ? 'w' : 'n');
+        return '<tr><td>'+ZT.esc(v.kind)+'</td><td>'+ZT.esc(v.name)+'<br><span class="faint">'+ZT.esc(v.ver_id)+'</span></td>'+
+          '<td><span class="pill '+stCls+'">'+ZT.esc(v.status)+'</span></td><td class="faint">'+ZT.esc(v.gray_scope)+'</td>'+
+          '<td class="faint">'+ZT.ts(v.created_at)+'</td>'+
+          '<td><button class="btn gh sm" data-id="'+v.ver_id+'">回滚到此版本</button></td></tr>';
+      }).join('')+'</tbody></table></div>';
+    document.querySelectorAll('#pvs button[data-id]').forEach(function(b){
+      b.onclick = async function(){
+        await ZT.post('/api/v1/admin/prompts/'+b.dataset.id+'/rollback', {});
+        ZT.toast('已回滚','ok'); loadPv();
+      };
+    });
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function publishPv(){
+  var body = {
+    kind: document.getElementById('p-kind').value,
+    name: document.getElementById('p-name').value.trim(),
+    content: document.getElementById('p-content').value,
+    status: document.getElementById('p-status').value,
+    grayScope: document.getElementById('p-gray').value.split(',').map(function(x){return x.trim()}).filter(Boolean)
+  };
+  if (!body.name || !body.content){ ZT.toast('请填写名称与内容','err'); return; }
+  try{ await ZT.post('/api/v1/admin/prompts', body); ZT.toast('已发布','ok'); loadPv(); }
+  catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function loadCls(){
+  try{
+    var r = await ZT.get('/api/v1/admin/classes');
+    document.getElementById('classes').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>班级</th><th>课程</th><th>学期</th></tr></thead><tbody>'+
+      r.classes.map(function(c){ return '<tr><td>'+ZT.esc(c.name)+'<br><span class="faint">'+ZT.esc(c.class_id)+'</span></td><td>'+ZT.esc(c.course)+'</td><td>'+ZT.esc(c.term||'')+'</td></tr>' }).join('')+
+      '</tbody></table></div><div class="faint mt12">账号：'+r.users.map(function(u){return ZT.esc(u.username+'('+u.role+')')}).join(' · ')+'</div>';
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function addClass(){
+  var id = document.getElementById('c-id').value.trim();
+  var nm = document.getElementById('c-name').value.trim();
+  if (!id || !nm){ ZT.toast('请填写班级 ID 与名称','err'); return; }
+  try{ await ZT.post('/api/v1/admin/classes', { classId:id, name:nm }); ZT.toast('已新增','ok'); loadCls(); }
+  catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function doImport(){
+  var txt = document.getElementById('imp').value.trim();
+  var rows = [];
+  try{ rows = JSON.parse(txt); }catch(_){
+    rows = txt.split('\n').filter(Boolean).map(function(line){
+      var p = line.split(',');
+      return { studentId:p[0], name:p[1], classId:p[2], groupId:p[3] };
+    });
+  }
+  try{
+    var r = await ZT.post('/api/v1/admin/students/import', { rows: rows });
+    document.getElementById('imp-res').innerHTML = '<div class="note">导入成功 '+r.imported+' 条</div>';
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function loadAudit(){
+  try{
+    var r = await ZT.get('/api/v1/admin/audit');
+    document.getElementById('audit').innerHTML = r.logs.length ? '<div class="tbl-wrap"><table><thead><tr><th>时间</th><th>操作者</th><th>角色</th><th>动作</th><th>对象</th><th>详情</th></tr></thead><tbody>'+
+      r.logs.map(function(l){
+        return '<tr><td class="faint">'+ZT.ts(l.created_at)+'</td><td class="faint">'+ZT.esc(l.actor_id||'')+'</td><td>'+ZT.esc(l.actor_role||'')+'</td>'+
+          '<td>'+ZT.esc(l.action)+'</td><td class="faint">'+ZT.esc(l.target||'')+'</td><td class="faint" style="max-width:320px;word-break:break-all">'+ZT.esc(l.detail)+'</td></tr>';
+      }).join('')+'</tbody></table></div>' : '<div class="empty">暂无日志</div>';
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+boot();
+</script>
+</body>
+</html>

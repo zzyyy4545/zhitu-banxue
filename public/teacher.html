@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>知途伴学 · 教师端学情驾驶舱</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="app">
+  <div class="topbar" id="topbar"></div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-tab="dash">班级总览</button>
+    <button class="tab" data-tab="heat">知识点热力</button>
+    <button class="tab" data-tab="alert">预警处理</button>
+    <button class="tab" data-tab="cluster">求助聚类</button>
+    <button class="tab" data-tab="policy">封顶层配置</button>
+    <button class="tab" data-tab="unlock">解锁审批</button>
+    <button class="tab" data-tab="intervene">一键干预</button>
+    <button class="tab" data-tab="obe">OBE 证据导出</button>
+    <button class="tab" data-tab="git">提交轨迹</button>
+    <button class="tab" data-tab="team">团队观察</button>
+    <button class="tab" data-tab="push">推送与成本</button>
+    <button class="tab" data-tab="guard">越界与诚信</button>
+  </div>
+
+  <div class="main">
+    <div class="pane on" id="pane-dash">
+      <div class="mets mb12" id="cards"></div>
+      <div class="grid g2">
+        <div class="card"><h3>小组进度<span class="sub">点击小组下钻</span></h3><div id="groups"></div></div>
+        <div class="card"><h3>层级停留分布<span class="sub">核心论文指标</span></h3><div id="dist"></div>
+          <div class="note" style="margin-top:12px">L0–L1 占比越高，说明学生更多止步于提示与方向即自行解决 —— 引导有效。</div>
+        </div>
+      </div>
+      <div class="card mt12" id="drill"></div>
+    </div>
+
+    <div class="pane" id="pane-heat">
+      <div class="grid g2">
+        <div class="card"><h3>知识点热力<span class="sub">求助次数 × 平均解决轮次</span></h3><div id="heat"></div></div>
+        <div class="card"><h3>图谱未覆盖知识点<span class="sub">课堂可补充</span></h3><div id="uncov"></div></div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-alert">
+      <div class="card mb12"><h3>主动触达规则<span class="sub">默认阈值，可配置</span></h3><div id="rules"></div></div>
+      <div class="card"><h3>预警列表
+        <span class="rowflex gap8">
+          <select id="alert-status" style="padding:5px 9px;border:1px solid var(--bd);border-radius:8px">
+            <option value="pending">待处理</option><option value="handled">已处理</option><option value="">全部</option>
+          </select>
+          <button class="btn gh sm" id="btn-scan">重新扫描</button>
+        </span></h3><div id="alerts"></div></div>
+    </div>
+
+    <div class="pane" id="pane-cluster">
+      <div class="card"><h3>求助聚类<span class="sub">本周课堂应重点讲什么</span></h3><div id="clusters"></div>
+        <button class="btn sm mt12" id="btn-outline">生成课堂补充材料提纲</button>
+        <div id="outline" class="mt12"></div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-policy">
+      <div class="grid g2">
+        <div class="card"><h3>按阶段设置封顶层<span class="sub">全局生效，可定时切换</span></h3>
+          <div id="pol-stages"></div>
+          <div class="note mt12">层级只能取 L1–L4，不允许「无限制」。配置即时生效并写入审计日志。</div>
+        </div>
+        <div class="card"><h3>定时任务覆盖<span class="sub">如「Sprint 最后 3 天放开到 L3」</span></h3>
+          <div class="fld"><label>阶段</label><select id="tp-stage"></select></div>
+          <div class="fld"><label>封顶层</label><select id="tp-cap"><option value="1">L1</option><option value="2" selected>L2</option><option value="3">L3</option><option value="4">L4</option></select></div>
+          <div class="fld"><label>生效开始</label><input id="tp-from" type="datetime-local"></div>
+          <div class="fld"><label>生效结束</label><input id="tp-to" type="datetime-local"></div>
+          <button class="btn sm" id="btn-tpolicy">保存定时策略</button>
+        </div>
+      </div>
+      <div class="card mt12"><h3>当前策略列表</h3><div id="pol-list"></div></div>
+    </div>
+
+    <div class="pane" id="pane-unlock">
+      <div class="card"><h3>解锁申请审批<span class="sub">仅当次任务当次生效，到期自动回落</span></h3><div id="unlocks"></div></div>
+    </div>
+
+    <div class="pane" id="pane-intervene">
+      <div class="card">
+        <h3>一键干预与群发<span class="sub">发送前需二次确认</span></h3>
+        <div class="fld"><label>受众</label>
+          <select id="iv-audience">
+            <option value="all">全班学生</option>
+            <option value="alert">命中待处理预警的学生</option>
+            <option value="tag">命中某知识点的学生</option>
+          </select></div>
+        <div class="fld" id="iv-rule-wrap" style="display:none"><label>预警类型</label>
+          <select id="iv-rule"><option value="no_commit_3d">连续无提交</option><option value="same_point_3">同一卡点重复</option><option value="deadline_48h">临近交付</option></select></div>
+        <div class="fld" id="iv-tag-wrap" style="display:none"><label>知识点标签</label><input id="iv-tag" placeholder="如：用户故事"></div>
+        <div class="fld"><label>消息内容</label><textarea id="iv-text" rows="3" placeholder="写好引导消息，避免催促语气…"></textarea></div>
+        <div class="rowflex"><label style="font-size:12.5px"><input type="checkbox" id="iv-confirm"> 我确认发送（二次确认）</label>
+          <button class="btn sm" id="btn-intervene">发送</button></div>
+        <div id="iv-result" class="mt12"></div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-obe">
+      <div class="card">
+        <h3>OBE 达成度证据<span class="sub">过程性证据，不含成绩认定</span></h3>
+        <div class="rowflex mb12">
+          <label style="font-size:12.5px"><input type="checkbox" id="obe-anon" checked> 学号哈希脱敏</label>
+          <button class="btn gh sm" id="obe-load">刷新数据</button>
+          <button class="btn gh sm" id="obe-csv">下载 CSV</button>
+          <button class="btn gh sm" id="obe-md">下载汇总 Markdown</button>
+        </div>
+        <div id="obe"></div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-git">
+      <div class="card mb12">
+        <h3>仓库登记与同步<span class="sub">只读 Token · 平台不可达时走手工导入</span></h3>
+        <div class="rowflex gap8 mb12" style="flex-wrap:wrap">
+          <input id="git-group" placeholder="小组 ID（如 SE-2026-A-G01）" style="flex:1;min-width:160px;padding:7px 10px;border:1px solid var(--bd);border-radius:8px">
+          <select id="git-platform" style="padding:7px 9px;border:1px solid var(--bd);border-radius:8px">
+            <option value="gitea">Gitea</option><option value="gitlab">GitLab</option><option value="github">GitHub</option>
+          </select>
+          <input id="git-url" placeholder="仓库地址 https://…" style="flex:2;min-width:220px;padding:7px 10px;border:1px solid var(--bd);border-radius:8px">
+          <input id="git-token" placeholder="只读 Token（可空）" style="flex:1;min-width:140px;padding:7px 10px;border:1px solid var(--bd);border-radius:8px">
+          <button class="btn sm" id="btn-git-add">登记</button>
+        </div>
+        <div class="fld"><label>手工导入（降级通道）：每行一条「sha|日期|作者|提交信息」，或直接粘贴 JSON 数组</label>
+          <textarea id="git-import" rows="3" style="width:100%;font-family:Consolas,monospace;font-size:12px;padding:10px;border:1px solid var(--bd);border-radius:8px" placeholder="a1b2c3d4|2026-09-20|赵一鸣|feat: 新增搜索接口，因为验收标准要求3秒内返回&#10;a1b2c3d5|2026-09-21|钱子涵|fix: 修复空结果白屏，因为空数组没走占位分支"></textarea></div>
+        <button class="btn gh sm" id="btn-git-import">导入所选小组</button>
+        <div id="git-repos" class="mt12"></div>
+      </div>
+      <div class="card">
+        <h3>提交轨迹分析<span class="sub">过程性提交频次 · 间隔方差 · 成员事实分布</span></h3>
+        <div class="rowflex gap8 mb12">
+          <button class="btn gh sm" id="btn-git-load">刷新分析</button>
+          <span class="faint" id="git-totals"></span>
+        </div>
+        <div id="git-analysis"></div>
+        <div class="rowflex gap8 mt12" style="flex-wrap:wrap;border-top:1px solid var(--bd);padding-top:10px">
+          <input id="git-detail-group" placeholder="小组 ID（逐人详情，如 SE-2026-A-G01）" style="flex:1;min-width:200px;padding:7px 10px;border:1px solid var(--bd);border-radius:8px">
+          <input id="git-from" type="date" title="起始日期（可空）" style="padding:6px 8px;border:1px solid var(--bd);border-radius:8px">
+          <span class="faint" style="align-self:center">至</span>
+          <input id="git-to" type="date" title="截止日期（可空）" style="padding:6px 8px;border:1px solid var(--bd);border-radius:8px">
+          <button class="btn gh sm" id="btn-git-detail">组详情</button>
+          <button class="btn gh sm" id="btn-git-report">导出报告</button>
+        </div>
+        <div id="git-detail" class="mt12"></div>
+      </div>
+    </div>
+
+    <!-- ============ 团队观察（M3） ============ -->
+    <div class="pane" id="pane-team">
+      <div class="card mb12">
+        <h3>团队协作总览<span class="sub">站会参与 · 阻碍待办 · 答辩预演 · 互评 · 复盘</span></h3>
+        <div class="rowflex gap8 mb12">
+          <button class="btn gh sm" id="btn-team-load">刷新</button>
+          <button class="btn sm" id="btn-weekly">生成教师版周报</button>
+        </div>
+        <div id="team-overview"><div class="empty">点击「刷新」加载</div></div>
+        <div id="weekly-view" class="mt12"></div>
+      </div>
+      <div class="grid g2">
+        <div class="card">
+          <h3>某组站会明细<span class="sub">谁答了 · 空泛标记 · 阻碍项</span></h3>
+          <div class="rowflex gap8 mb8">
+            <input id="team-group" placeholder="小组 ID（如 SE-2026-A-G01）" style="flex:1;padding:7px 10px;border:1px solid var(--bd);border-radius:8px">
+            <button class="btn sm" id="btn-team-standup">查看</button>
+          </div>
+          <div id="team-standup"></div>
+        </div>
+        <div class="card">
+          <h3>角色扮演 / 答辩预演记录<span class="sub">澄清问题数 · 观察反馈</span></h3>
+          <div id="team-roleplays"><div class="empty">点击「刷新」加载</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 推送与成本（M3） ============ -->
+    <div class="pane" id="pane-push">
+      <div class="grid g2 mb12">
+        <div class="card">
+          <h3>推送渠道<span class="sub">企业微信群机器人 · 失败降级站内 · 全量留痕</span></h3>
+          <div class="rowflex gap8 mb8" style="flex-wrap:wrap">
+            <input id="pc-name" placeholder="渠道名称" style="flex:1;min-width:120px;padding:7px 10px;border:1px solid var(--bd);border-radius:8px">
+            <input id="pc-webhook" placeholder="企微机器人 Webhook https://qyapi.weixin.qq.com/…" style="flex:2;min-width:220px;padding:7px 10px;border:1px solid var(--bd);border-radius:8px">
+            <button class="btn sm" id="btn-pc-add">添加</button>
+          </div>
+          <div id="pc-list"></div>
+        </div>
+        <div class="card">
+          <h3>模型用量与成本治理<span class="sub">分级路由 · 缓存命中 · 每日配额</span></h3>
+          <div id="cost-view"><div class="empty">点击「刷新」加载</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>推送日志<span class="sub">触达统计与失败原因</span></h3>
+        <div class="rowflex gap8 mb8"><button class="btn gh sm" id="btn-push-load">刷新</button></div>
+        <div id="push-logs"></div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-guard">
+      <div class="grid g2">
+        <div class="card"><h3>越界尝试统计<span class="sub">护栏与红线拦截</span></h3><div id="gstats"></div></div>
+        <div class="card"><h3>学生过程证据包<span class="sub">输入学号查询 · 仅提示不判定</span></h3>
+          <div class="rowflex"><input id="ev-sid" placeholder="如 SE-2026-A-S001" style="flex:1;border:1px solid var(--bd);border-radius:8px;padding:7px 10px">
+          <button class="btn sm" id="btn-ev">查询</button></div>
+          <div id="evidence" class="mt12"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+var U = ZT.guard(['teacher','ta','admin']);
+if (!U) throw new Error('unauthorized');
+
+var STAGES = [];
+
+async function boot(){
+  ZT.topbar('知途伴学 · 学情驾驶舱', U, '<span class="pill">教师端</span>');
+  var st = await ZT.get('/api/v1/stages');
+  STAGES = st.stages;
+  document.getElementById('tp-stage').innerHTML = STAGES.map(function(s){return '<option value="'+s.key+'">'+ZT.esc(s.name)+'</option>'}).join('');
+
+  ZT.tabs('tabs', function(k){
+    ({dash:loadDash, heat:loadHeat, alert:loadAlerts, cluster:loadClusters,
+      policy:loadPolicies, unlock:loadUnlocks, obe:loadObe, git:loadGitBoard,
+      team:loadTeamBoard, push:loadPushPane, guard:loadGuard})[k] && loadMap(k);
+  });
+  function loadMap(k){
+    ({dash:loadDash, heat:loadHeat, alert:loadAlerts, cluster:loadClusters,
+      policy:loadPolicies, unlock:loadUnlocks, obe:loadObe, git:loadGitBoard,
+      team:loadTeamBoard, push:loadPushPane, guard:loadGuard})[k]();
+  }
+
+  document.getElementById('btn-scan').onclick = async function(){
+    var r = await ZT.post('/api/v1/teacher/alerts/scan', {});
+    ZT.toast('扫描完成，新增 '+r.created+' 条','ok'); loadAlerts();
+  };
+  document.getElementById('alert-status').onchange = loadAlerts;
+  document.getElementById('btn-outline').onclick = genOutline;
+  document.getElementById('btn-tpolicy').onclick = saveTimedPolicy;
+  document.getElementById('btn-intervene').onclick = doIntervene;
+  document.getElementById('iv-audience').onchange = function(){
+    var v = this.value;
+    document.getElementById('iv-rule-wrap').style.display = v==='alert' ? '' : 'none';
+    document.getElementById('iv-tag-wrap').style.display = v==='tag' ? '' : 'none';
+  };
+  document.getElementById('obe-load').onclick = loadObe;
+  document.getElementById('obe-csv').onclick = function(){ dl('csv'); };
+  document.getElementById('obe-md').onclick = function(){ dl('md'); };
+  document.getElementById('btn-ev').onclick = loadEvidence;
+  document.getElementById('btn-git-add').onclick = addGitRepo;
+  document.getElementById('btn-git-import').onclick = importGit;
+  document.getElementById('btn-git-load').onclick = loadGitAnalysis;
+  document.getElementById('btn-git-detail').onclick = viewGitDetail;
+  document.getElementById('btn-git-report').onclick = exportGitReport;
+  document.getElementById('btn-team-load').onclick = loadTeamBoard;
+  document.getElementById('btn-weekly').onclick = loadWeekly;
+  document.getElementById('btn-team-standup').onclick = viewStandup;
+  document.getElementById('btn-pc-add').onclick = addChannel;
+  document.getElementById('btn-push-load').onclick = loadPushLogs;
+
+  loadDash();
+}
+
+/* ---------- 总览 ---------- */
+async function loadDash(){
+  try{
+    var r = await ZT.get('/api/v1/teacher/dashboard');
+    var c = r.cards;
+    var lv = r.levelDistribution;
+    document.getElementById('cards').innerHTML = [
+      ['活跃学生(7天)', c.activeStudents, '人'],
+      ['今日求助', c.todayHelps, '次'],
+      ['待处理预警', c.pendingAlerts, '条'],
+      ['平均解决轮次', c.avgTurns, '轮'],
+      ['卡点解决率', Math.round((c.resolveRate||0)*100)+'%', ''],
+      ['L0–L1 占比', lv.lowShare+'%', '目标 ≥'+lv.target+'%'],
+      ['越界拦截', c.guardBlocks, '次']
+    ].map(function(x){
+      return '<div class="met"><b>'+x[1]+'</b><span>'+x[0]+(x[2]?' ('+x[2]+')':'')+'</span>'+(x[3]?'<small>'+x[3]+'</small>':'')+'</div>';
+    }).join('');
+
+    document.getElementById('groups').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>小组</th><th>阶段</th><th>进度</th><th>未解卡点</th><th>风险</th></tr></thead><tbody>'+
+      r.groups.slice(0,60).map(function(g){
+        var risk = g.risk ? '<span class="pill '+(g.risk==='stuck'?'r':'w')+'">'+(g.risk==='stuck'?'卡点多':'进度滞后')+'</span>' : '<span class="pill g">正常</span>';
+        return '<tr data-g="'+ZT.esc(g.groupId)+'" style="cursor:pointer"><td>'+ZT.esc(g.name)+'<br><span class="faint">'+ZT.esc(g.groupId)+' · '+g.members+'人</span></td>'+
+          '<td>'+ZT.esc(g.stageName||g.stage)+'<br><span class="faint">Sprint '+g.sprintNo+'</span></td>'+
+          '<td>'+g.progress+'%</td><td>'+g.openStuck+'</td><td>'+risk+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+
+    document.querySelectorAll('#groups tr[data-g]').forEach(function(tr){
+      tr.onclick = function(){ drillGroup(tr.dataset.g); };
+    });
+
+    var d = lv.dist, p = lv.pct, tot = lv.total || 1;
+    var names = ['提示反问','方向指引','步骤拆解','局部示例','完整讲解'];
+    document.getElementById('dist').innerHTML = [0,1,2,3,4].map(function(i){
+      return '<div class="heat"><span class="nm">L'+i+' '+names[i]+'</span><span class="bd"><i style="width:'+p[i]+'%"></i></span><span class="vl">'+d[i]+' 次</span></div>';
+    }).join('') + '<div class="faint mt12">共 '+tot+' 个求助事件；L0–L1 合计 '+lv.lowShare+'%</div>';
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function drillGroup(gid){
+  var box = document.getElementById('drill');
+  box.innerHTML = '<div class="loading">加载中…</div>';
+  try{
+    var r = await ZT.get('/api/v1/teacher/students?groupId='+encodeURIComponent(gid));
+    box.innerHTML = '<h3>小组成员<span class="sub">'+ZT.esc(gid)+'</span></h3><div class="tbl-wrap"><table><thead><tr><th>学号</th><th>姓名</th><th>基础水平</th><th>求助数</th><th>未解卡点</th><th>高频卡点</th><th>操作</th></tr></thead><tbody>'+
+      r.students.map(function(s){
+        return '<tr><td class="faint">'+ZT.esc(s.studentId)+'</td><td>'+ZT.esc(s.name)+'</td><td>'+ZT.esc(s.baseLevel)+'</td><td>'+s.events+'</td><td>'+s.openStuck+'</td>'+
+        '<td class="faint">'+ (s.stuckTags.length? s.stuckTags.map(function(t){return ZT.esc(t.name)}).join('、') : '—') +'</td>'+
+        '<td><button class="btn gh sm" data-sid="'+ZT.esc(s.studentId)+'">查看证据</button></td></tr>';
+      }).join('')+'</tbody></table></div>';
+    box.querySelectorAll('button[data-sid]').forEach(function(b){
+      b.onclick = function(){
+        document.querySelector('.tab[data-tab="guard"]').click();
+        document.getElementById('ev-sid').value = b.dataset.sid;
+        loadEvidence();
+      };
+    });
+  }catch(e){ box.innerHTML = '<div class="empty">'+ZT.esc(e.message)+'</div>'; }
+}
+
+/* ---------- 热力 ---------- */
+async function loadHeat(){
+  try{
+    var r = await ZT.get('/api/v1/teacher/knowledge-heatmap');
+    var max = Math.max.apply(null, r.heat.map(function(h){return h.heat}).concat([1]));
+    document.getElementById('heat').innerHTML = r.heat.length ? r.heat.map(function(h){
+      return '<div class="heat"><span class="nm" title="'+ZT.esc(h.name)+'">'+ZT.esc(h.name)+'</span>'+
+        '<span class="bd"><i style="width:'+Math.round(h.heat/max*100)+'%"></i></span>'+
+        '<span class="vl">'+h.count+'次 · '+h.avgTurns+'轮</span></div>';
+    }).join('') : '<div class="empty">暂无数据</div>';
+    document.getElementById('uncov').innerHTML = r.uncovered.length
+      ? '<div class="faint mb12">以下知识点尚未出现在任何求助中，可能是没讲到，也可能是学生没遇到问题：</div>'+
+        r.uncovered.slice(0,40).map(function(n){return '<span class="step" style="margin:3px">'+ZT.esc(n)+'</span>'}).join('')
+      : '<div class="empty">图谱知识点均已覆盖</div>';
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+/* ---------- 预警 ---------- */
+async function loadAlerts(){
+  try{
+    var st = document.getElementById('alert-status').value;
+    var r = await ZT.get('/api/v1/teacher/alerts' + (st? '?status='+st : ''));
+    document.getElementById('rules').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>触发条件</th><th>默认阈值</th><th>系统动作</th><th>可配</th></tr></thead><tbody>'+
+      r.rules.map(function(x){
+        return '<tr><td>'+ZT.esc(x.name)+'</td><td>'+ZT.esc(x.threshold+' '+x.unit)+'</td><td>'+ZT.esc(x.action)+'</td><td>'+(x.configurable?'是':'否')+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+
+    document.getElementById('alerts').innerHTML = r.alerts.length ? '<div class="tbl-wrap"><table><thead><tr><th>对象</th><th>类型</th><th>原因</th><th>建议</th><th>时间</th><th>操作</th></tr></thead><tbody>'+
+      r.alerts.map(function(a){
+        var act = a.status==='pending'
+          ? '<button class="btn gh sm" data-id="'+a.alert_id+'" data-s="handled">标记已处理</button> <button class="btn gh sm" data-id="'+a.alert_id+'" data-s="ignored">忽略</button>'
+          : '<span class="pill n">'+ZT.esc(a.status)+'</span>';
+        return '<tr><td>'+ZT.esc(a.student_name||a.target_id)+'<br><span class="faint">'+ZT.esc(a.target_id)+'</span></td>'+
+          '<td>'+ZT.esc(a.rule_id)+'</td><td>'+ZT.esc(a.trigger_reason)+'</td><td class="faint">'+ZT.esc(a.suggest||'')+'</td>'+
+          '<td class="faint">'+ZT.timeAgo(a.created_at)+'</td><td>'+act+'</td></tr>';
+      }).join('')+'</tbody></table></div>' : '<div class="empty">暂无预警</div>';
+
+    document.querySelectorAll('#alerts button[data-id]').forEach(function(b){
+      b.onclick = async function(){
+        await ZT.post('/api/v1/teacher/alerts/'+b.dataset.id+'/handle', { status: b.dataset.s, note: '' });
+        ZT.toast('已处理','ok'); loadAlerts();
+      };
+    });
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+/* ---------- 聚类 ---------- */
+async function loadClusters(){
+  try{
+    var r = await ZT.get('/api/v1/teacher/clusters');
+    document.getElementById('clusters').innerHTML = r.clusters.length ? '<div class="tbl-wrap"><table><thead><tr><th>选择</th><th>阶段 / 环节</th><th>求助次数</th><th>平均轮次</th><th>知识点</th></tr></thead><tbody>'+
+      r.clusters.map(function(c,i){
+        return '<tr><td><input type="checkbox" class="ck" value="'+ZT.esc(c.stage+'|'+c.nodeId)+'"'+(i<3?' checked':'')+'></td>'+
+          '<td><b>'+ZT.esc(c.stageName)+'</b> · '+ZT.esc(c.title)+'</td><td>'+c.count+'</td><td>'+c.avgTurns+'</td>'+
+          '<td class="faint">'+ (c.tags.length? c.tags.map(ZT.esc).join('、') : '—') +'</td></tr>';
+      }).join('')+'</tbody></table></div>' : '<div class="empty">暂无数据</div>';
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function genOutline(){
+  var keys = [].slice.call(document.querySelectorAll('#clusters .ck:checked')).map(function(x){return x.value});
+  if (!keys.length){ ZT.toast('请先选择至少一个卡点','err'); return; }
+  try{
+    var r = await ZT.post('/api/v1/teacher/outline', { clusterKeys: keys });
+    document.getElementById('outline').innerHTML = r.outline.map(function(o){
+      return '<div class="card mb12" style="background:#FCFCFB"><h3>'+ZT.esc(o.title)+'<span class="sub">'+ZT.esc(o.goal)+'</span></h3>'+
+        '<ol style="margin-left:18px;font-size:13px"><li>'+o.points.map(ZT.esc).join('</li><li>')+'</li></ol>'+
+        '<div class="faint mt12">关联知识点：'+(o.knowledgeTags.length? o.knowledgeTags.map(ZT.esc).join('、') : '—')+'</div></div>';
+    }).join('') + '<div class="note">按验收标准，此处仅输出提纲，不生成完整讲义正文。</div>';
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+/* ---------- 策略 ---------- */
+async function loadPolicies(){
+  try{
+    var r = await ZT.get('/api/v1/teacher/policies');
+    var map = {};
+    r.policies.forEach(function(p){ if(p.scope==='global' && p.stage && !p.active_from) map[p.stage] = p.cap_level; });
+    document.getElementById('pol-stages').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>阶段</th><th>当前封顶</th><th>调整为</th></tr></thead><tbody>'+
+      STAGES.map(function(s){
+        var cur = map[s.key] !== undefined ? map[s.key] : (r.defaults[s.key]||2);
+        return '<tr><td>'+ZT.esc(s.name)+'</td><td><span class="pill">L'+cur+'</span></td><td>'+
+          '<select data-stage="'+s.key+'" class="cap-sel">'+[1,2,3,4].map(function(n){
+            return '<option value="'+n+'"'+(n===cur?' selected':'')+'>L'+n+' '+ZT.LEVEL_BRIEF[n]+'</option>'}).join('')+'</select></td></tr>';
+      }).join('')+'</tbody></table></div>';
+    document.querySelectorAll('.cap-sel').forEach(function(sel){
+      sel.onchange = async function(){
+        await ZT.put('/api/v1/teacher/policies', { scope:'global', stage: sel.dataset.stage, capLevel: parseInt(sel.value,10), note:'教师端调整' });
+        ZT.toast('已更新：'+sel.dataset.stage+' → L'+sel.value,'ok'); loadPolicies();
+      };
+    });
+
+    document.getElementById('pol-list').innerHTML = r.policies.length ? '<div class="tbl-wrap"><table><thead><tr><th>范围</th><th>阶段</th><th>封顶</th><th>生效时间</th><th>更新人</th><th>操作</th></tr></thead><tbody>'+
+      r.policies.map(function(p){
+        return '<tr><td>'+ZT.esc(p.scope)+(p.scope_id?' / '+ZT.esc(p.scope_id):'')+'</td><td>'+ZT.esc(p.stage||'全部')+'</td>'+
+          '<td><span class="pill">L'+p.cap_level+'</span></td><td class="faint">'+(p.active_from? ZT.ts(p.active_from)+' → '+ZT.ts(p.active_to) : '长期生效')+'</td>'+
+          '<td class="faint">'+ZT.esc(p.updated_by||'')+'</td><td><button class="btn gh sm" data-del="'+p.policy_id+'">删除</button></td></tr>';
+      }).join('')+'</tbody></table></div>' : '<div class="empty">暂无策略</div>';
+    document.querySelectorAll('#pol-list button[data-del]').forEach(function(b){
+      b.onclick = async function(){ await ZT.del('/api/v1/teacher/policies/'+b.dataset.del); ZT.toast('已删除','ok'); loadPolicies(); };
+    });
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function saveTimedPolicy(){
+  var body = {
+    scope:'global',
+    stage: document.getElementById('tp-stage').value,
+    capLevel: parseInt(document.getElementById('tp-cap').value,10),
+    activeFrom: document.getElementById('tp-from').value ? new Date(document.getElementById('tp-from').value).toISOString() : null,
+    activeTo: document.getElementById('tp-to').value ? new Date(document.getElementById('tp-to').value).toISOString() : null,
+    note:'定时策略'
+  };
+  try{ await ZT.put('/api/v1/teacher/policies', body); ZT.toast('定时策略已保存','ok'); loadPolicies(); }
+  catch(e){ ZT.toast(e.message,'err'); }
+}
+
+/* ---------- 解锁审批 ---------- */
+async function loadUnlocks(){
+  try{
+    var r = await ZT.get('/api/v1/teacher/unlock-requests');
+    document.getElementById('unlocks').innerHTML = r.requests.length ? '<div class="tbl-wrap"><table><thead><tr><th>学生</th><th>申请层级</th><th>理由</th><th>层级轨迹</th><th>状态</th><th>审批</th></tr></thead><tbody>'+
+      r.requests.map(function(q){
+        var act = q.decision==='pending'
+          ? '<button class="btn gh sm" data-id="'+q.req_id+'" data-d="approved">批准 L'+q.target_level+'</button> '+
+            '<button class="btn gh sm" data-id="'+q.req_id+'" data-d="rejected">驳回</button> '+
+            '<button class="btn gh sm" data-id="'+q.req_id+'" data-d="human">转人工</button>'
+          : '<span class="pill '+(q.decision==='approved'?'g':(q.decision==='rejected'?'r':'w'))+'">'+ZT.esc(q.decision)+'</span>'+
+            (q.valid_until? '<br><span class="faint">有效期至 '+ZT.ts(q.valid_until)+'</span>' : '');
+        return '<tr><td>'+ZT.esc(q.student_name||q.student_id)+'<br><span class="faint">'+ZT.esc(q.student_id)+'</span></td>'+
+          '<td><span class="pill w">L'+q.target_level+'</span></td><td>'+ZT.esc(q.reason||'')+'</td>'+
+          '<td class="faint">'+ZT.esc(JSON.stringify((q.trace||{}).levelTrail||[]))+'</td>'+
+          '<td class="faint">'+ZT.timeAgo(q.created_at)+'</td><td>'+act+'</td></tr>';
+      }).join('')+'</tbody></table></div>' : '<div class="empty">暂无申请</div>';
+
+    document.querySelectorAll('#unlocks button[data-id]').forEach(function(b){
+      b.onclick = async function(){
+        var note = b.dataset.d==='rejected' ? '建议先把卡点拆细，再来申请' : '';
+        await ZT.post('/api/v1/unlock-requests/'+b.dataset.id+'/decision', { decision: b.dataset.d, note: note, validHours: 24 });
+        ZT.toast('审批完成，已通知学生','ok'); loadUnlocks();
+      };
+    });
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+/* ---------- 干预 ---------- */
+async function doIntervene(){
+  if (!document.getElementById('iv-confirm').checked){ ZT.toast('请先勾选二次确认','err'); return; }
+  var aud = document.getElementById('iv-audience').value;
+  var body = { text: document.getElementById('iv-text').value, confirm: true };
+  if (aud==='all') body.audience = 'all';
+  else if (aud==='alert'){ body.audience='alert'; body.ruleId = document.getElementById('iv-rule').value; }
+  else { body.audience='tag'; body.tag = document.getElementById('iv-tag').value; }
+  try{
+    var r = await ZT.post('/api/v1/teacher/intervene', body);
+    document.getElementById('iv-result').innerHTML = '<div class="note">已触达 <b>'+r.sent+'</b> 人 / 目标 '+r.total+' 人'+
+      (r.failed? '，未送达 '+r.failed+' 人（静默时段/额度/已关闭触达）':'')+'</div>';
+    ZT.toast('发送完成','ok');
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+/* ---------- OBE ---------- */
+async function loadObe(){
+  var anon = document.getElementById('obe-anon').checked;
+  try{
+    var r = await ZT.get('/api/v1/teacher/obe-export');
+    document.getElementById('obe').innerHTML =
+      '<div class="tbl-wrap"><table><thead><tr><th>指标</th><th>数值</th><th>单位</th><th>口径说明</th></tr></thead><tbody>'+
+      r.dims.map(function(d){ return '<tr><td>'+ZT.esc(d.name)+'</td><td><b>'+d.value+'</b></td><td>'+ZT.esc(d.unit)+'</td><td class="faint">'+ZT.esc(d.note)+'</td></tr>' }).join('')+
+      '</tbody></table></div>'+
+      '<div class="grid g2 mt12"><div class="card"><h3>层级停留分布</h3>'+
+      [0,1,2,3,4].map(function(i){ return '<div class="heat"><span class="nm">L'+i+' '+ZT.LEVEL_BRIEF[i]+'</span><span class="bd"><i style="width:'+r.dist.pct[i]+'%"></i></span><span class="vl">'+r.dist.dist[i]+' 次</span></div>' }).join('')+
+      '</div><div class="card"><h3>阶段产出完整度</h3>'+
+      r.stageCompleteness.map(function(s){ return '<div class="heat"><span class="nm">'+ZT.esc(s.name)+'</span><span class="bd"><i style="width:'+Math.min(100,s.artifacts*10)+'%"></i></span><span class="vl">'+s.artifacts+' 件</span></div>' }).join('')+
+      '</div></div>'+
+      '<div class="note mt12">脱敏开关：'+(anon?'已开启（学号哈希映射）':'未开启')+'。导出文件附指标口径说明。</div>';
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+function dl(fmt){
+  var anon = document.getElementById('obe-anon').checked ? 1 : 0;
+  location.href = '/api/v1/teacher/obe-export?format='+fmt+'&anonymize='+anon;
+}
+
+/* ---------- 越界与诚信 ---------- */
+async function loadGuard(){
+  try{
+    var r = await ZT.get('/api/v1/teacher/guardrail-stats');
+    document.getElementById('gstats').innerHTML =
+      '<div class="tbl-wrap"><table><thead><tr><th>结果</th><th>次数</th></tr></thead><tbody>'+
+      Object.keys(r.byResult).map(function(k){ return '<tr><td>'+ZT.esc(k)+'</td><td>'+r.byResult[k]+'</td></tr>' }).join('')+
+      '</tbody></table></div>'+
+      '<div class="faint mt12">按原因码：</div>'+
+      Object.keys(r.byReason).map(function(k){ return '<span class="step" style="margin:3px">'+ZT.esc(k)+' × '+r.byReason[k]+'</span>' }).join('');
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function loadEvidence(){
+  var sid = document.getElementById('ev-sid').value.trim();
+  if (!sid) return;
+  try{
+    var r = await ZT.get('/api/v1/teacher/students/'+encodeURIComponent(sid)+'/evidence');
+    var box = document.getElementById('evidence');
+    box.innerHTML =
+      '<div class="faint">'+ZT.esc((r.student||{}).name||'')+' · '+ZT.esc(sid)+'</div>'+
+      '<div class="mt12"><b>求助事件</b> '+r.events.length+' 条 / 已解决 '+r.events.filter(function(e){return e.status==='resolved'}).length+' 条</div>'+
+      '<div><b>产出物</b> '+r.artifacts.length+' 件</div>'+
+      '<div class="mt12"><b>异常标记（仅提示，不判定）</b></div>'+
+      (r.anomalies.length ? r.anomalies.map(function(a){
+        return '<div class="warn" style="margin:8px 0"><b>'+ZT.esc(a.code)+'</b><br>'+ZT.esc(a.detail)+
+        '<br><span class="faint">证据：'+ZT.esc((a.evidence||[]).join('、'))+'</span></div>';
+      }).join('') : '<div class="faint">无异常标记</div>')+
+      '<div class="note mt12">'+ZT.esc(r.note||'')+'</div>';
+  }catch(e){ document.getElementById('evidence').innerHTML = '<div class="empty">'+ZT.esc(e.message)+'</div>'; }
+}
+
+/* ---------- 提交轨迹（M2 工具层） ---------- */
+async function addGitRepo(){
+  var groupId = document.getElementById('git-group').value.trim();
+  if (!groupId){ ZT.toast('先填小组 ID', 'err'); return; }
+  try{
+    var r = await ZT.post('/api/v1/teacher/git/repos', {
+      groupId: groupId,
+      platform: document.getElementById('git-platform').value,
+      url: document.getElementById('git-url').value.trim(),
+      token: document.getElementById('git-token').value.trim() || null
+    });
+    ZT.toast(r.updated ? '已更新该小组的仓库配置' : '仓库已登记', 'ok');
+    loadGitRepos();
+  }catch(e){ ZT.toast(e.message, 'err'); }
+}
+
+async function syncGitRepo(repoId, btn){
+  if (btn){ btn.disabled = true; btn.textContent = '同步中…'; }
+  try{
+    var r = await ZT.post('/api/v1/teacher/git/repos/'+encodeURIComponent(repoId)+'/sync', {});
+    if (r.ok) ZT.toast('同步完成：拉取 '+r.fetched+' 条，新增 '+r.inserted+' 条', 'ok');
+    else ZT.toast('同步失败：'+r.error+'（可用手工导入兜底）', 'err');
+    loadGitRepos();
+    loadGitAnalysis();
+  }catch(e){
+    ZT.toast(e.message, 'err');
+    loadGitRepos();
+  }
+}
+
+async function importGit(){
+  var groupId = document.getElementById('git-group').value.trim();
+  var raw = document.getElementById('git-import').value;
+  if (!groupId){ ZT.toast('先填要导入的小组 ID', 'err'); return; }
+  try{
+    var r = await ZT.post('/api/v1/teacher/git/import', { groupId: groupId, raw: raw });
+    ZT.toast('导入成功：解析 '+r.imported+' 条，新增 '+r.inserted+' 条', 'ok');
+    document.getElementById('git-import').value = '';
+    loadGitRepos(); loadGitAnalysis();
+  }catch(e){ ZT.toast(e.message, 'err'); }
+}
+
+async function loadGitRepos(){
+  var box = document.getElementById('git-repos');
+  try{
+    var r = await ZT.get('/api/v1/teacher/git/repos');
+    if (!r.repos.length){ box.innerHTML = '<div class="empty">还没有登记仓库。填上方表单登记，或直接用手工导入。</div>'; return; }
+    box.innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>小组</th><th>平台</th><th>仓库</th><th>状态</th><th>提交</th><th>最近同步</th><th>操作</th></tr></thead><tbody>'+
+      r.repos.map(function(x){
+        var st = x.status === 'active' ? '<span class="pill g">正常</span>'
+          : '<span class="pill n">不可达</span>' + (x.lastError ? '<br><span class="nt muted" title="'+ZT.esc(x.lastError)+'">'+ZT.esc(String(x.lastError).slice(0,30))+'</span>' : '');
+        var btn = x.platform === 'manual' ? '<span class="faint">手工通道</span>'
+          : '<button class="btn gh sm" data-repo="'+ZT.esc(x.repoId)+'">同步</button>';
+        return '<tr><td>'+ZT.esc(x.groupId)+'</td><td>'+ZT.esc(x.platform)+'</td>'+
+          '<td class="faint">'+ZT.esc(x.url||'—')+'</td><td>'+st+'</td><td>'+x.commits+'</td>'+
+          '<td>'+ZT.timeAgo(x.lastSyncedAt)+'</td><td>'+btn+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+    box.querySelectorAll('button[data-repo]').forEach(function(b){
+      b.onclick = function(){ syncGitRepo(b.dataset.repo, b); };
+    });
+  }catch(e){ box.innerHTML = '<div class="empty">'+ZT.esc(e.message)+'</div>'; }
+}
+
+async function loadGitBoard(){
+  loadGitRepos();
+  loadGitAnalysis();
+}
+
+/* ---------- M2 深化：单组逐人详情（提交信息规范 / 时段分布 / 成员事实） ---------- */
+function gitRangeQs(){
+  var qs = [];
+  var f = document.getElementById('git-from').value;
+  var t = document.getElementById('git-to').value;
+  if (f) qs.push('from=' + f);
+  if (t) qs.push('to=' + t);
+  return qs.length ? '&' + qs.join('&') : '';
+}
+
+async function viewGitDetail(){
+  var gid = document.getElementById('git-detail-group').value.trim();
+  var box = document.getElementById('git-detail');
+  if (!gid){ ZT.toast('填小组 ID', 'err'); return; }
+  box.innerHTML = '<div class="loading">分析中…</div>';
+  try{
+    var r = await ZT.get('/api/v1/teacher/git/groups/' + encodeURIComponent(gid) + '/commits' + gitRangeQs().replace(/^&/, '?'));
+    var a = r.analysis;
+    if (!a.count){ box.innerHTML = '<div class="empty">该组在此区间没有提交记录</div>'; return; }
+    var mq = a.messageQuality, hs = a.hourHistogram;
+    var sevPill = function(p, txt){ return '<span class="pill ' + p + '">' + txt + '</span>'; };
+    var types = Object.entries(mq.typeDistribution).map(function(x){
+      return sevPill('', x[0] + '×' + x[1]);
+    }).join(' ');
+    var hourBars = hs.hours.map(function(n, h){
+      return '<div title="' + h + '时 ' + n + '次" style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:56px">' +
+        (n ? '<span style="font-size:10px;color:var(--fg2)">' + n + '</span>' : '') +
+        '<div style="width:70%;background:' + (h >= 0 && h < 7 ? 'var(--rd,#d64545)' : 'var(--mu,#8a94a6)') + ';border-radius:2px 2px 0 0;height:' + Math.max(n ? 8 : 2, n * 4) + 'px"></div>' +
+        '<span style="font-size:9px;color:var(--fg3)">' + (h % 3 === 0 ? h : '') + '</span></div>';
+    }).join('');
+    var members = '<h4 style="margin:12px 0 6px">成员事实<span class="sub">不评分、不排名（FR-303）</span></h4>' +
+      '<div class="tbl-wrap"><table><thead><tr><th>成员</th><th>提交</th><th>活跃天</th><th>次/活跃日</th><th>低信息率</th><th>首末提交</th><th>代码行</th></tr></thead><tbody>' +
+      a.members.map(function(m){
+        return '<tr><td>' + ZT.esc(m.author) + '</td><td>' + m.count + '</td><td>' + m.activeDays + '</td><td>' + m.perActiveDay + '</td>' +
+          '<td>' + Math.round(m.lowInfoRatio * 100) + '%</td>' +
+          '<td class="faint">' + String(m.firstCommitAt).slice(0, 10) + ' ~ ' + String(m.lastCommitAt).slice(0, 10) + '</td>' +
+          '<td>' + (m.additions || m.deletions ? '+' + m.additions + ' / -' + m.deletions : '—') + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    var lowInfo = mq.lowInfoList.length
+      ? '<h4 style="margin:12px 0 6px">低信息提交明细（前 ' + mq.lowInfoList.length + ' 条）</h4><ul class="inv">' +
+        mq.lowInfoList.map(function(x){
+          return '<li><span class="mk no">×</span><span>' + ZT.esc(x.author) + '：' + ZT.esc(String(x.message).slice(0, 50)) + '（' + String(x.committedAt).slice(0, 10) + '）</span></li>';
+        }).join('') + '</ul>'
+      : '';
+    var commits = '<h4 style="margin:12px 0 6px">提交明细（最近 ' + a.commits.length + ' 条' + (a.range.from || a.range.to ? '，区间 ' + (a.range.from || '…') + ' ~ ' + (a.range.to || '…') : '') + '）</h4>' +
+      '<div class="tbl-wrap" style="max-height:260px;overflow:auto"><table><thead><tr><th>时间</th><th>作者</th><th>信息</th><th>类型</th><th>±行</th></tr></thead><tbody>' +
+      a.commits.map(function(c){
+        return '<tr><td>' + ZT.ts(c.committed_at) + '</td><td>' + ZT.esc(c.author_name) + '</td><td>' + ZT.esc(String(c.message).slice(0, 60)) + '</td>' +
+          '<td>' + ZT.esc(String(c.message).split(':')[0].slice(0, 12)) + '</td>' +
+          '<td>' + (c.additions || c.deletions ? '+' + c.additions + ' / -' + c.deletions : '—') + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    box.innerHTML =
+      '<div class="rowflex gap8 mb8">' +
+      '<span class="pill n">提交 ' + a.count + '</span><span class="pill">活跃 ' + a.activeDays + ' 天</span>' +
+      '<span class="pill">规范符合率 ' + Math.round(mq.conventionalRatio * 100) + '%</span>' +
+      '<span class="pill">深夜提交 ' + Math.round(hs.lateNightRatio * 100) + '%</span>' +
+      (a.codeVolume.hasStats ? '<span class="pill">+' + a.codeVolume.additions + ' / -' + a.codeVolume.deletions + ' 行</span>' : '') + '</div>' +
+      '<div class="note mb8">提交类型分布：' + types + '</div>' +
+      '<div class="note">时段分布（红为 0–7 点）：高峰 ' + String(hs.peakHour).padStart(2, '0') + ':00</div>' +
+      '<div style="display:flex;gap:2px;margin:8px 0">' + hourBars + '</div>' +
+      (a.rhythms.length ? '<div class="note">' + a.rhythms.map(function(x){ return ZT.esc(x.text); }).join('；') + '</div>' : '') +
+      members + lowInfo + commits +
+      '<div class="note mt12" style="font-size:12px">成员数据只列事实，评价由小组自评互评完成；诚信结论由教师判定（FR-604）。</div>';
+  }catch(e){ box.innerHTML = '<div class="empty">' + ZT.esc(e.message) + '</div>'; }
+}
+
+async function exportGitReport(){
+  var gid = document.getElementById('git-detail-group').value.trim();
+  if (!gid){ ZT.toast('填小组 ID', 'err'); return; }
+  try{
+    var res = await fetch('/api/v1/teacher/git/report?groupId=' + encodeURIComponent(gid) + gitRangeQs() + '&format=text', {
+      headers: { Authorization: 'Bearer ' + ZT.getToken() }
+    });
+    if (!res.ok) throw new Error('导出失败 ' + res.status);
+    var text = await res.text();
+    ZT.downloadText('提交轨迹报告-' + gid + '.md', text, 'text/markdown');
+    var box = document.getElementById('git-detail');
+    box.innerHTML = '<h4 style="margin:0 0 6px">分析报告（已下载 .md，以下是预览）</h4>' +
+      '<pre style="white-space:pre-wrap;background:#f6f7f9;border:1px solid var(--bd);border-radius:8px;padding:12px;font-size:12px;max-height:420px;overflow:auto">' + ZT.esc(text) + '</pre>';
+  }catch(e){ ZT.toast(e.message, 'err'); }
+}
+
+async function loadGitAnalysis(){
+  var box = document.getElementById('git-analysis');
+  box.innerHTML = '<div class="loading">分析中…</div>';
+  try{
+    var r = await ZT.get('/api/v1/teacher/git/analysis');
+    var t = r.totals;
+    document.getElementById('git-totals').textContent =
+      t.groups+' 个小组 / '+t.withGit+' 个已接入 Git / 共 '+t.commits+' 次提交 / 平均 '+t.avgPerDay+' 次/活跃日 / '+t.riskGroups.length+' 个有节奏信号';
+    if (!r.groups.length){ box.innerHTML = '<div class="empty">暂无小组数据</div>'; return; }
+    box.innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>小组</th><th>提交数</th><th>活跃天</th><th>次/日</th><th>间隔方差(h²)</th><th>距上次</th><th>低信息提交</th><th>成员分布</th><th>节奏信号</th></tr></thead><tbody>'+
+      r.groups.map(function(g){
+        var risk = g.rhythms.length
+          ? g.rhythms.map(function(x){ return '<span class="pill w">'+ZT.esc(x.text)+'</span>' }).join(' ')
+          : '<span class="pill g">正常</span>';
+        return '<tr><td>'+ZT.esc(g.groupId)+'<br><span class="faint">'+ZT.esc(g.projectName||'')+'</span></td>'+
+          '<td>'+g.count+'</td><td>'+g.activeDays+'</td><td>'+g.perDay+'</td>'+
+          '<td>'+(g.count? g.intervalVarianceH : '—')+'</td>'+
+          '<td>'+(g.daysSinceLast===null?'—':g.daysSinceLast+' 天')+'</td>'+
+          '<td>'+(g.count? Math.round(g.lowInfoRatio*100)+'%' : '—')+'</td>'+
+          '<td class="faint">'+(g.count? g.members+' 人' : '—')+'</td>'+
+          '<td>'+risk+'</td></tr>';
+      }).join('')+'</tbody></table></div>'+
+      '<div class="note mt12">'+ZT.esc(r.note||'')+'</div>';
+  }catch(e){ box.innerHTML = '<div class="empty">'+ZT.esc(e.message)+'</div>'; }
+}
+
+/* ==================== 团队观察 / 推送与成本（M3） ==================== */
+async function loadTeamBoard(){
+  try {
+    var r = await ZT.get('/api/v1/teacher/team/overview');
+    document.getElementById('team-overview').innerHTML = '<div class="tbl-wrap"><table><thead><tr>'+
+      '<th>小组</th><th>今日站会</th><th>参与</th><th>阻碍待办</th><th>答辩预演</th><th>互评</th><th>复盘</th></tr></thead><tbody>'+
+      r.groups.map(function(g){
+        return '<tr><td>'+ZT.esc(g.projectName||g.groupId)+'<br><span class="faint">'+ZT.esc(g.groupId)+' · '+g.members+'人</span></td>'+
+          '<td>'+(g.standupToday?'<span class="pill g">已开</span>':'<span class="pill w">未开</span>')+'</td>'+
+          '<td>'+g.standupAnswered+'/'+g.members+'</td>'+
+          '<td>'+(g.blockers?'<span class="pill r">'+g.blockers+' 项</span>':g.openTodos+' 项')+'</td>'+
+          '<td>'+g.roleplays+' 场<span class="faint">（完 '+g.roleplaysEnded+'）</span></td>'+
+          '<td>'+g.peerReviews+' 条</td>'+
+          '<td>'+(g.retroDone?'<span class="pill g">已复盘</span>':'<span class="pill w">未复盘</span>')+'</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    var rp = await ZT.get('/api/v1/teacher/team/roleplays');
+    document.getElementById('team-roleplays').innerHTML = rp.roleplays.length
+      ? rp.roleplays.slice(0,20).map(function(x){
+          return '<div style="border-top:1px solid var(--bd);padding:6px 0"><b>'+ZT.esc(x.studentName||x.studentId)+'</b> · '+ZT.esc(x.roleName)+
+            ' · '+x.turns+' 轮 · 澄清 '+x.clarifying+' 问 '+(x.status==='ended'?'<span class="pill g">已结束</span>':'<span class="pill w">进行中</span>')+
+            (x.feedback ? '<div class="faint" style="margin-top:4px">'+x.feedback.suggestions.map(ZT.esc).join('；')+'</div>' : '')+'</div>';
+        }).join('')
+      : '<div class="empty">暂无记录</div>';
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function viewStandup(){
+  var gid = document.getElementById('team-group').value.trim();
+  if(!gid){ ZT.toast('填小组 ID','err'); return; }
+  try {
+    var r = await ZT.get('/api/v1/teacher/team/standups?groupId='+encodeURIComponent(gid));
+    document.getElementById('team-standup').innerHTML = !r.standup
+      ? '<div class="empty">该组还没有站会记录</div>'
+      : '<div class="faint mb8">'+r.standup.date+'（'+(r.standup.status==='closed'?'已结束':'进行中')+'）</div>'+
+        '<div class="tbl-wrap"><table><thead><tr><th>组员</th><th>昨天</th><th>今天</th><th>阻碍</th></tr></thead><tbody>'+
+        r.answers.map(function(a){
+          return '<tr><td>'+ZT.esc(a.name)+(a.vague?' <span class="pill w">空泛</span>':'')+'</td>'+
+            '<td>'+ZT.esc(a.yesterday||'—')+'</td><td>'+ZT.esc(a.today||'—')+'</td>'+
+            '<td>'+(a.blocker&&a.blocker!=='无'?'<span class="pill r">'+ZT.esc(a.blocker)+'</span>':'—')+'</td></tr>';
+        }).join('') + '</tbody></table></div>';
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function loadWeekly(){
+  try {
+    var r = await ZT.get('/api/v1/teacher/weekly');
+    document.getElementById('weekly-view').innerHTML =
+      '<div class="grid g4" style="margin-bottom:10px">' +
+      [['7天求助', r.helpTotal, '次'], ['活跃会话', r.activeSessions7d, '个'], ['站会', r.standups7d, '场'], ['站会阻碍', r.standupBlockers7d, '项']]
+        .map(function(x){ return '<div class="met"><b>'+x[1]+'</b><span>'+x[0]+' ('+x[2]+')</span></div>'; }).join('') + '</div>' +
+      '<div><b>高频卡点 Top</b><ol style="margin:6px 0 0 18px">' +
+      r.topStuck.map(function(t){ return '<li>'+ZT.esc(t.knowledge)+' × '+t.count+'</li>'; }).join('') + '</ol></div>';
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function loadPushPane(){
+  loadChannels();
+  loadCost();
+  loadPushLogs();
+}
+
+async function loadChannels(){
+  try {
+    var r = await ZT.get('/api/v1/teacher/push/channels');
+    document.getElementById('pc-list').innerHTML = r.channels.length
+      ? r.channels.map(function(c){
+          return '<div class="rowflex gap8" style="border-top:1px solid var(--bd);padding:6px 0">'+
+            '<b>'+ZT.esc(c.name)+'</b><span class="faint">'+(c.type==='inbox'?'站内':'企微机器人')+'</span>'+
+            '<span class="faint" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+ZT.esc(c.webhook||'')+'</span>'+
+            (c.enabled?'<span class="pill g">启用</span>':'<span class="pill w">停用</span>')+
+            '<button class="btn xs" data-pc-test="'+c.id+'">测试</button>'+
+            '<button class="btn xs ghost" data-pc-toggle="'+c.id+'" data-on="'+c.enabled+'">'+(c.enabled?'停用':'启用')+'</button>'+
+            '<button class="btn xs ghost" data-pc-del="'+c.id+'">删除</button></div>';
+        }).join('')
+      : '<div class="empty">暂无渠道</div>';
+    document.querySelectorAll('#pc-list button[data-pc-test]').forEach(function(b){
+      b.onclick = async function(){
+        var r = await ZT.post('/api/v1/teacher/push/channels/'+b.dataset.pcTest+'/test', {});
+        ZT.toast(r.ok ? '发送成功' : '发送失败：'+(r.error||''), r.ok?'ok':'err');
+        loadPushLogs();
+      };
+    });
+    document.querySelectorAll('#pc-list button[data-pc-toggle]').forEach(function(b){
+      b.onclick = async function(){
+        await ZT.put('/api/v1/teacher/push/channels/'+b.dataset.pcToggle, { enabled: b.dataset.on!=='1' });
+        loadChannels();
+      };
+    });
+    document.querySelectorAll('#pc-list button[data-pc-del]').forEach(function(b){
+      b.onclick = async function(){
+        await ZT.del('/api/v1/teacher/push/channels/'+b.dataset.pcDel);
+        loadChannels();
+      };
+    });
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function addChannel(){
+  try {
+    var name = document.getElementById('pc-name').value.trim();
+    var webhook = document.getElementById('pc-webhook').value.trim();
+    await ZT.post('/api/v1/teacher/push/channels', webhook
+      ? { name: name, type: 'wecom_webhook', webhook: webhook }
+      : { name: name, type: 'inbox' });
+    ZT.toast('渠道已添加','ok');
+    loadChannels();
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function loadCost(){
+  try {
+    var r = await ZT.get('/api/v1/teacher/cost/usage?days=7');
+    var t = r.total;
+    document.getElementById('cost-view').innerHTML =
+      '<div class="grid g4" style="margin-bottom:10px">' +
+      [['7天调用', t.calls, '次'], ['模型/规则', t.llm+'/'+t.rule, ''], ['缓存命中', Math.round((r.cache.rate||0)*100)+'%', '命中率'], ['降级', t.fallback, '次']]
+        .map(function(x){ return '<div class="met"><b>'+x[1]+'</b><span>'+x[0]+(x[2]?' ('+x[2]+')':'')+'</span></div>'; }).join('') + '</div>' +
+      '<div class="faint">每日配额 '+r.quota.dailyCap+' 次/生 · '+ZT.esc(r.quota.policy)+' · 累计 token '+t.tokens+'</div>' +
+      (r.byModel.length ? '<div class="mt8"><b>按模型</b>'+ r.byModel.map(function(m){
+        return '<div class="faint">'+ZT.esc(m.model)+'（'+m.tier+'）× '+m.calls+' · token '+m.tokens+' · 均 '+m.avgMs+'ms</div>';
+      }).join('')+'</div>' : '');
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function loadPushLogs(){
+  try {
+    var r = await ZT.get('/api/v1/teacher/push/logs?limit=30');
+    document.getElementById('push-logs').innerHTML =
+      '<div class="faint mb8">共 '+r.stats.total+' 条 · 成功 '+r.stats.ok+' · 失败 '+r.stats.fail+'</div>' +
+      (r.logs.length ? '<div class="tbl-wrap"><table><thead><tr><th>时间</th><th>渠道</th><th>标题</th><th>结果</th></tr></thead><tbody>'+
+      r.logs.map(function(l){
+        return '<tr><td class="faint">'+String(l.created_at).replace('T',' ').slice(0,19)+'</td>'+
+          '<td>'+String(l.channel_id).slice(0,10)+'</td><td>'+ZT.esc(l.title||'')+'</td>'+
+          '<td>'+(l.ok?'<span class="pill g">送达</span>':'<span class="pill r">失败</span> <span class="faint">'+ZT.esc(l.error||'')+'</span>')+'</td></tr>';
+      }).join('') + '</tbody></table></div>' : '<div class="empty">暂无推送</div>');
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+boot();
+</script>
+</body>
+</html>

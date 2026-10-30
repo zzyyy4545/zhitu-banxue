@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>知途伴学 · 基于 AI 智能体的全天候伴随式导学系统</title>
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  :root{
+    --bg:#F7F7F5; --panel:#fff; --bd:#E4E2DC; --tx:#2C2C2A; --mu:#6B6A66; --ft:#9A9892;
+    --ac:#185FA5; --ac-s:#E6F1FB; --ac-b:#B5D4F4;
+    --pu:#534AB7; --pu-s:#EEEDFE;
+    --wn:#854F0B; --wn-s:#FAEEDA;
+    --ok:#3B6D11; --ok-s:#EAF3DE;
+    --rd:#A32D2D; --rd-s:#FCEBEB;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);
+       font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",system-ui,sans-serif;
+       font-size:14px;line-height:1.65;-webkit-font-smoothing:antialiased}
+
+  .zh{display:flex;min-height:100vh;gap:0}
+  .zh-main{flex:1 1 auto;min-width:0;padding:38px 40px 44px;overflow-y:auto}
+  .zh-side{flex:0 0 400px;background:#FCFCFB;border-left:1px solid var(--bd);
+           display:flex;align-items:center;justify-content:center;padding:32px 28px}
+
+  .maxw{max-width:860px}
+
+  /* 品牌 */
+  .brand{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  .brand .logo{width:46px;height:46px;border-radius:13px;background:var(--ac);color:#fff;
+               display:flex;align-items:center;justify-content:center;font-size:21px;font-weight:500}
+  .brand h1{font-size:23px;font-weight:600;margin:0;letter-spacing:.3px}
+  .brand .sub{font-size:13px;color:var(--mu)}
+  .tagline{margin:18px 0 26px;font-size:15.5px;color:var(--tx);line-height:1.75}
+  .tagline b{color:var(--ac);font-weight:600}
+
+  .sect{margin-bottom:26px}
+  .sect > h2{font-size:14px;font-weight:600;color:var(--mu);letter-spacing:.6px;
+             margin:0 0 12px;display:flex;align-items:center;gap:8px}
+  .sect > h2::after{content:"";flex:1;height:1px;background:var(--bd)}
+
+  /* 对比 */
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .cmp .col{border:1px solid var(--bd);border-radius:12px;padding:16px 18px;background:var(--panel)}
+  .cmp .col.no{background:#FBF9F8;border-color:#EDE4E2}
+  .cmp .col.yes{background:var(--ac-s);border-color:var(--ac-b)}
+  .cmp .col .hd{font-weight:600;font-size:13.5px;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+  .cmp .col.no .hd{color:var(--rd)}
+  .cmp .col.yes .hd{color:var(--ac)}
+  .cmp ul{margin:0;padding-left:17px;font-size:13px;color:var(--mu);line-height:1.9}
+  .cmp .col.yes ul{color:#2F4B63}
+
+  /* 梯度 */
+  .ladder{display:flex;gap:8px}
+  .rung{flex:1;border:1px solid var(--bd);border-radius:10px;padding:11px 10px;background:var(--panel);
+        position:relative;text-align:center}
+  .rung .lv{font-size:15px;font-weight:600;color:var(--pu)}
+  .rung .nm{font-size:12px;color:var(--tx);margin-top:2px}
+  .rung .ct{font-size:11px;color:var(--ft);margin-top:6px}
+  .rung.hot{border-color:var(--pu);background:var(--pu-s)}
+  .ladder-note{margin-top:9px;font-size:12px;color:var(--mu)}
+
+  /* 红线 */
+  .rules{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .rule{border:1px solid var(--bd);border-left:3px solid var(--rd);border-radius:8px;
+        padding:9px 12px;background:var(--panel);font-size:12.5px}
+  .rule .n{font-weight:600;color:var(--tx)}
+  .rule .d{color:var(--mu);font-size:11.5px;margin-top:1px}
+
+  /* 指标 */
+  .mets{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  .met{border:1px solid var(--bd);border-radius:10px;padding:13px 12px;background:var(--panel);text-align:center}
+  .met .v{font-size:21px;font-weight:600;color:var(--ac);line-height:1.25}
+  .met .k{font-size:11.5px;color:var(--mu);margin-top:3px}
+
+  .foot{margin-top:24px;padding-top:16px;border-top:1px solid var(--bd);
+        font-size:12px;color:var(--ft);line-height:1.8}
+
+  /* 登录侧 */
+  .zh-side .login{background:var(--panel);border:1px solid var(--bd);border-radius:16px;
+                  padding:30px 30px;width:100%;max-width:344px}
+  .zh-side .lg{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+  .zh-side .logo{width:38px;height:38px;border-radius:11px;background:var(--ac);color:#fff;
+                 display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:500}
+  .zh-side h1{font-size:18px;font-weight:500;margin:0}
+  .fld{margin-bottom:13px}
+  .fld label{display:block;font-size:12.5px;color:var(--mu);margin-bottom:6px}
+  .fld input{width:100%;border:1px solid var(--bd);border-radius:10px;padding:10px 12px;
+             background:#FCFCFB;outline:none;font-size:14px}
+  .fld input:focus{border-color:var(--ac);background:#fff}
+  .btn{width:100%;border:none;border-radius:10px;padding:11px 16px;background:var(--ac);
+       color:#fff;cursor:pointer;font-size:14px}
+  .btn:disabled{opacity:.6}
+  .err{background:var(--rd-s);color:var(--rd);border-radius:8px;padding:8px 12px;
+       font-size:12.5px;margin-bottom:12px;display:none}
+  .err.on{display:block}
+  .roles{margin-top:18px;padding-top:15px;border-top:1px solid var(--bd);font-size:12px;color:var(--mu);line-height:1.9}
+  .roles b{color:var(--tx);font-weight:600}
+  .roles a{color:var(--ac)}
+
+  @media (max-width:1080px){
+    .zh{flex-direction:column}
+    .zh-side{flex:none;border-left:none;border-top:1px solid var(--bd);padding:28px 20px 40px}
+    .zh-main{padding:28px 20px}
+    .cmp,.rules{grid-template-columns:1fr}
+    .mets{grid-template-columns:repeat(3,1fr)}
+    .ladder{flex-wrap:wrap}
+    .rung{flex:1 1 30%}
+  }
+</style>
+</head>
+<body>
+<div class="zh">
+  <!-- ================= 左：项目展示 ================= -->
+  <main class="zh-main">
+    <div class="maxw">
+      <div class="brand">
+        <div class="logo">知</div>
+        <div>
+          <h1>知途伴学</h1>
+          <div class="sub">基于 AI 智能体的全天候伴随式导学系统 · 面向软件工程课程</div>
+        </div>
+      </div>
+
+      <div class="tagline">
+        学生在项目里卡住时，通用 AI 会直接把答案给他 —— 作业交上去了，能力没长。<br>
+        知途做的是另一件事：<b>不代做、不评分、只给问题清单</b>，用<b>逐级解锁的介入梯度</b>把思考过程还给学生，
+        同时把每一次求助、卡点与产出<b>完整留痕</b>，让教师看见真实的学习过程。
+      </div>
+
+      <!-- 核心差异 -->
+      <div class="sect">
+        <h2>与通用 AI 助手的本质差异</h2>
+        <div class="cmp">
+          <div class="col no">
+            <div class="hd">✕ 通用 AI 助手</div>
+            <ul>
+              <li>提问即得完整答案，学生复制提交</li>
+              <li>无条件满足，越问越浅</li>
+              <li>过程不可见，教师无法干预</li>
+              <li>无学术诚信边界</li>
+            </ul>
+          </div>
+          <div class="col yes">
+            <div class="hd">✓ 知途伴学</div>
+            <ul>
+              <li>按求助深度逐级解锁，先反问后讲解</li>
+              <li><span id="rl-count">—</span> 条红线硬性拦截「替做」请求</li>
+              <li>卡点、产出、提交全量留痕可追溯</li>
+              <li>只给问题清单，不给现成答案</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 介入梯度 -->
+      <div class="sect">
+        <h2>核心机制一 · L0–L4 逐级解锁的导学介入梯度</h2>
+        <div class="ladder" id="ladder"></div>
+        <div class="ladder-note" id="ladder-note">
+          同一卡点 24 小时内再度求助，介入层级自动回落一级 —— 防止学生用反复提问「刷」到完整答案。
+        </div>
+      </div>
+
+      <!-- 红线 -->
+      <div class="sect">
+        <h2>核心机制二 · 不可违背的导学红线</h2>
+        <div class="rules" id="rules"><div class="rule"><div class="n">加载中…</div></div></div>
+      </div>
+
+      <!-- 运行数据 -->
+      <div class="sect">
+        <h2>系统运行实况</h2>
+        <div class="mets" id="mets"></div>
+        <div class="ladder-note" id="metnote"></div>
+      </div>
+
+      <div class="foot">
+        知途伴学 · 大连东软信息学院「AI+教育」应用创新大赛 赛道二参赛作品<br>
+        系统内置 <span id="rl-count2">—</span> 条不可违背红线，累计硬性拦截 <span id="gb-count">—</span> 次；
+        所有导学过程留痕，可追溯、可复核。
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= 右：登录 ================= -->
+  <aside class="zh-side">
+    <form class="login" id="form">
+      <div class="lg">
+        <div class="logo">知</div>
+        <div>
+          <h1>进入系统</h1>
+          <div class="sub" style="font-size:12.5px;color:var(--mu);margin:0">引导 · 陪伴 · 留痕，不代做</div>
+        </div>
+      </div>
+      <div class="err" id="err"></div>
+      <div style="height:18px"></div>
+      <div class="fld">
+        <label>用户名</label>
+        <input id="u" autocomplete="username" placeholder="请输入用户名">
+      </div>
+      <div class="fld">
+        <label>密码</label>
+        <input id="p" type="password" autocomplete="current-password" placeholder="请输入密码">
+      </div>
+      <button class="btn" type="submit" id="go">登录</button>
+
+      <div class="roles">
+        <div><b>评审体验账号</b>（密码统一 123456，点击即填入）</div>
+        <div>· <a href="#" data-u="s001">s001</a> 学生（组长，含完整学习轨迹）</div>
+        <div>· <a href="#" data-u="s002">s002</a> 学生（普通组员）</div>
+        <div>· <a href="#" data-u="teacher">teacher</a> 任课教师（班级看板 / 预警 / 审批）</div>
+        <div>· <a href="#" data-u="ta">ta</a> 助教 · <a href="#" data-u="admin">admin</a> 管理员</div>
+      </div>
+    </form>
+  </aside>
+</div>
+
+<script>
+var err = document.getElementById('err');
+function showError(m){ err.textContent = m; err.classList.add('on'); }
+if (location.search.indexOf('err=role') >= 0) showError('当前账号无权访问该页面');
+
+document.querySelectorAll('.roles a').forEach(function(a){
+  a.onclick = function(e){
+    e.preventDefault();
+    document.getElementById('u').value = a.dataset.u;
+    document.getElementById('p').value = '123456';
+    err.classList.remove('on');
+  };
+});
+
+document.getElementById('form').onsubmit = async function(e){
+  e.preventDefault();
+  err.classList.remove('on');
+  var btn = document.getElementById('go');
+  btn.disabled = true; btn.textContent = '登录中…';
+  try {
+    var ctl = new AbortController();
+    var timer = setTimeout(function(){ ctl.abort(); }, 20000);
+    var r = await fetch('/api/v1/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ username: document.getElementById('u').value.trim(), password: document.getElementById('p').value }),
+      signal: ctl.signal
+    });
+    clearTimeout(timer);
+    var raw = await r.text();
+    var d;
+    try {
+      d = JSON.parse(raw);
+    } catch (parseErr) {
+      // 服务或外网通道未就绪（例如隧道中断返回 "no tunnel"、网关 502 HTML 页）
+      throw new Error('服务暂时不可用（' + r.status + '），请稍后重试');
+    }
+    if (!r.ok) throw new Error(d.error || '登录失败');
+    localStorage.setItem('zhitu_token', d.token);
+    localStorage.setItem('zhitu_user', JSON.stringify(d.user));
+    var map = { student:'student.html', leader:'student.html', ta:'teacher.html', teacher:'teacher.html', admin:'admin.html' };
+    location.href = map[d.user.role] || 'student.html';
+  } catch(ex){
+    var msg = (ex && ex.name === 'AbortError') ? '请求超时，请检查网络后重试' : (ex.message || '登录失败');
+    showError(msg);
+    btn.disabled = false; btn.textContent = '登录';
+  }
+};
+
+/* ---------- 展示区：拉取真实运行数据 ---------- */
+(async function(){
+  var d;
+  try {
+    var r = await fetch('/api/v1/public/overview');
+    d = await r.json();
+  } catch(e){ return; }
+  if (!d || !d.scale) return;
+
+  // 梯度阶梯
+  var peak = 0, peakIdx = 0;
+  (d.levelDist || []).forEach(function(v,i){ if (v > peak){ peak = v; peakIdx = i; } });
+  document.getElementById('ladder').innerHTML = (d.levels || []).map(function(l){
+    var n = (d.levelDist && d.levelDist[l.level]) || 0;
+    return '<div class="rung' + (l.level === peakIdx && peak > 0 ? ' hot' : '') + '">'
+      + '<div class="lv">' + l.name.split(' ')[0] + '</div>'
+      + '<div class="nm">' + (l.brief || l.name.split(' ')[1] || '') + '</div>'
+      + '<div class="ct">' + n + ' 次求助</div></div>';
+  }).join('');
+
+  // 机制实证：逐级解锁触发次数 + L4 从未自动触发
+  var note = document.getElementById('ladder-note');
+  var l4 = (d.levelDist && d.levelDist[4]) || 0;
+  note.innerHTML = '同一卡点 24 小时内再度求助，介入层级自动回落一级 —— 防止学生用反复提问「刷」到完整答案。<br>'
+    + '运行记录中 <b>' + (d.downgraded || 0) + '</b> 次求助触发过逐级解锁判定；'
+    + '而 <b>L4 完整讲解 ' + l4 + ' 次</b> —— '
+    + (l4 === 0
+        ? 'AI 从不自动给出完整答案，最高只到「局部示例」，这是系统的设计意图而非能力缺陷。'
+        : '完整讲解仅在教师人工介入后放行。');
+
+  // 红线：条数与拦截次数一律取自后端真实数据，避免文案与实现脱节
+  var rl = d.redlines || [];
+  var rlN = rl.length;
+  var gb = d.guardBlocks || 0;
+  var c1 = document.getElementById('rl-count');
+  var c2 = document.getElementById('rl-count2');
+  var gc = document.getElementById('gb-count');
+  if (c1) c1.textContent = rlN || '多';
+  if (c2) c2.textContent = rlN || '多';
+  if (gc) gc.innerHTML = gb ? '<b>' + gb + '</b>' : '0';
+
+  document.getElementById('rules').innerHTML = rl.length
+    ? rl.slice(0, 8).map(function(x){
+        return '<div class="rule"><div class="n">' + esc(x.name || x.id) + '</div>'
+             + (x.desc ? '<div class="d">' + esc(x.desc) + '</div>' : '') + '</div>';
+      }).join('')
+    : '<div class="rule"><div class="n">不代做：不直接给出可提交的完整代码 / 答案</div><div class="d">红线在系统层硬性拦截，不可通过提示词绕过</div></div>'
+     + '<div class="rule"><div class="n">不评分：不对学生能力做等级评定与排名</div><div class="d">只呈现事实与问题清单</div></div>'
+     + '<div class="rule"><div class="n">只给问题清单：卡点诊断只指出问题，不附修复代码</div><div class="d">修复方案由学生自行提出</div></div>'
+     + '<div class="rule"><div class="n">全量留痕：求助、产出、提交均可追溯</div><div class="d">教师端可复核任意一次导学过程</div></div>';
+
+  // 指标
+  var s = d.scale;
+  var mets = [
+    [s.students, '在册学生'],
+    [s.groups, '项目小组'],
+    [s.sessions, '导学会话'],
+    [s.helpEvents, '记录卡点'],
+    [s.artifacts, '结构化产出物'],
+  ];
+  document.getElementById('mets').innerHTML = mets.map(function(m){
+    return '<div class="met"><div class="v">' + m[0] + '</div><div class="k">' + m[1] + '</div></div>';
+  }).join('');
+  document.getElementById('metnote').textContent =
+    '另累计沉淀 ' + s.commits + ' 次代码提交轨迹、' + s.knowledgeNodes + ' 个课程知识点、'
+    + s.messages + ' 条导学对话，卡点讲透率 ' + (d.resolveRate || 0) + '%（数据实时取自系统数据库）。';
+
+  function esc(t){ return String(t==null?'':t).replace(/[&<>"]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+})();
+</script>
+</body>
+</html>

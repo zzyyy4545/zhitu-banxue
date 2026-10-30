@@ -1,0 +1,26 @@
+# 运行期数据（含教学数据，不入库）
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# 测试产物
+tests/_*.txt
+_server.log
+*.out
+
+# 环境变量（模型 API Key 等）
+.env
+.env.local
+
+node_modules/
+.DS_Store
+
+# SSH 私钥与隧道密钥（含 serveo 私钥，切勿提交）
+.ssh/
+
+# 运行期日志（.server.log / _crash.log / _server.log 等）
+*.log
+
+# 临时目录
+.tmp/

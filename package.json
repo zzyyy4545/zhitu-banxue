@@ -1,0 +1,24 @@
+{
+  "name": "zhitu-banxue",
+  "version": "1.0.0",
+  "private": true,
+  "description": "知途伴学 · 基于 AI 智能体的全天候伴随式导学系统（软件工程课程场景）",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "seed": "node server/db/seed.js",
+    "reset": "node server/db/seed.js --force",
+    "test": "node tests/run.js all",
+    "test:smoke": "node tests/run.js smoke",
+    "test:guard": "node tests/run.js guard",
+    "test:ui": "node tests/uicheck.js",
+    "test:llm": "node tests/llmcheck.js",
+    "verify:llm": "node tests/verifyllm.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "comments": {
+    "_": "零第三方依赖：Web 框架与数据层均使用 Node 内置模块（node:http / node:sqlite），便于校内私有化部署「复制即跑」。"
+  }
+}

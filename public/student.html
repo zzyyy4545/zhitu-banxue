@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>知途伴学 · 学生端</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="app">
+  <div class="topbar" id="topbar"></div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-tab="learn">伴学对话</button>
+    <button class="tab" data-tab="goals">学习节拍</button>
+    <button class="tab" data-tab="tools">工具箱</button>
+    <button class="tab" data-tab="team">团队协作</button>
+    <button class="tab" data-tab="artifacts">我的产出物</button>
+    <button class="tab" data-tab="profile">我的画像</button>
+    <button class="tab" data-tab="inbox">消息与设置</button>
+  </div>
+
+  <div class="main">
+    <!-- ============ 伴学对话 ============ -->
+    <div class="pane on" id="pane-learn">
+      <div class="sgrid">
+        <div>
+          <div class="card mb12">
+            <h3><span id="stage-name">需求澄清</span><span class="sub" id="stage-goal"></span></h3>
+            <div class="steps" id="steps"></div>
+            <div class="bar"><i id="progbar" style="width:0%"></i></div>
+            <div class="rowflex faint">
+              <span>当前层级 <b id="lv-text">L0</b></span>
+              <span>·</span><span>本轮封顶 <b id="cap-text">L2</b></span>
+              <span>·</span><span id="cap-src" class="faint"></span>
+              <span class="sp" style="flex:1"></span>
+              <select id="stage-sel" style="padding:5px 9px;border:1px solid var(--bd);border-radius:8px;background:#fff"></select>
+            </div>
+          </div>
+
+          <section class="chat">
+            <div class="chat-hd">
+              <span class="tt">知途 · 导学伙伴</span>
+              <span class="pill" id="lvl">L0 提示反问</span>
+              <span class="pill n" id="engine-tag">规则引擎</span>
+              <select id="hist-sessions" title="历史会话（FR-101 上下文接续）" style="margin-left:auto;max-width:150px;padding:3px 6px;border:1px solid var(--bd);border-radius:8px;background:#fff;font-size:12px"></select>
+            </div>
+            <div class="msgs" id="msgs"></div>
+            <div class="opts" id="opts"></div>
+            <div id="attach-chips" class="rowflex gap8" style="padding:0 12px 6px;flex-wrap:wrap"></div>
+            <div class="inbar">
+              <button class="ghost" id="btn-attach" title="上传代码文件 / 文档 / 截图（FR-105）" style="flex:0 0 auto;padding:6px 10px;border:1px solid var(--bd);border-radius:8px;background:#fff;cursor:pointer">📎</button>
+              <input type="file" id="file-input" multiple style="display:none">
+              <input id="inp" placeholder="写下你的想法，越粗糙越好…" autocomplete="off">
+              <button class="btn-send" id="send">发送</button>
+            </div>
+            <div class="stuckbar">
+              <button class="ghost" id="stuck">我还是卡住了 · 逐级解锁</button>
+              <button class="ghost" id="ask-unlock" style="flex:0 0 auto">申请解锁</button>
+            </div>
+          </section>
+        </div>
+
+        <aside class="side" style="display:flex;flex-direction:column;gap:16px">
+          <div class="card">
+            <h3><span id="art-name">用户故事卡</span><span class="sub">实时生成</span></h3>
+            <dl class="kv" id="art-fields"></dl>
+            <div class="reqbox" id="reqbox">
+              <div id="req-text"></div>
+              <button id="btn-unlock">向教师提交解锁申请</button>
+              <div id="unlock-status" class="note" style="margin-top:8px"></div>
+            </div>
+          </div>
+
+          <div class="card" id="inv-card">
+            <h3>INVEST 自检<span class="sub">导学诊断</span></h3>
+            <ul class="inv" id="inv"></ul>
+          </div>
+
+          <div class="card">
+            <h3>过程留痕<span class="sub">可回传教师端</span></h3>
+            <div class="mets" style="grid-template-columns:repeat(4,1fr);gap:8px">
+              <div class="met" style="padding:8px 4px"><b id="m-q" style="font-size:18px">0</b><span>导学问询</span></div>
+              <div class="met" style="padding:8px 4px"><b id="m-a" style="font-size:18px">0</b><span>我的作答</span></div>
+              <div class="met" style="padding:8px 4px"><b id="m-u" style="font-size:18px">0</b><span>求助升级</span></div>
+              <div class="met" style="padding:8px 4px"><b id="m-l" style="font-size:18px">L0</b><span>当前层级</span></div>
+            </div>
+            <ol class="tr" id="tr" style="margin-top:12px"></ol>
+          </div>
+
+          <div class="card">
+            <h3>本轮规则<span class="sub">红线声明</span></h3>
+            <ul class="inv" id="redlines"></ul>
+            <div class="note" style="margin:10px 0 0;font-size:12px">
+              我不会给你任何可直接提交的成品。想要更完整的讲解？提交解锁申请，由老师判断。
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>导出<span class="sub">学习档案</span></h3>
+            <button class="btn gh sm" id="btn-export" style="width:100%">导出本轮导学记录 (.md)</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- ============ 学习节拍（FR-401） ============ -->
+    <div class="pane" id="pane-goals">
+      <div class="card mb12">
+        <h3>今日微目标<span class="sub">由阶段目标拆解 · 可改写可自建 · 未完成只做归因不催促</span></h3>
+        <div class="mets mb12" id="goal-stats" style="grid-template-columns:repeat(4,1fr);gap:8px"></div>
+        <div id="goal-today"></div>
+        <div class="fld mt12"><label>自建一条微目标（拆到「今天半小时能做完」的粒度）</label>
+          <div class="rowflex gap8">
+            <input id="goal-new" placeholder="例如：把用户故事的验收标准补成可测量的三条" style="flex:1;padding:8px;border:1px solid var(--bd);border-radius:8px">
+            <button class="btn sm" id="btn-goal-add">添加</button>
+          </div>
+        </div>
+        <div class="note mt12" style="font-size:12px">微目标与 Sprint 阶段目标一一对应（可在列表中查看来源节点）；完不成不会扣分——写一句原因，系统据此调整明天的拆解。</div>
+      </div>
+      <div class="card"><h3>近 7 天节奏<span class="sub">微目标完成 / 未完成轨迹</span></h3><div id="goal-recent"></div></div>
+    </div>
+
+    <!-- ============ 工具箱 ============ -->
+    <div class="pane" id="pane-tools">
+      <div class="card mb12">
+        <h3>静态检查<span class="sub">只给问题清单与规范条目，修改由你完成</span></h3>
+        <div class="rowflex gap8 mb12">
+          <input id="sc-filename" placeholder="文件名（如 order.service.js，用于语言识别）" style="flex:1">
+          <select id="sc-lang" style="padding:6px 9px;border:1px solid var(--bd);border-radius:8px">
+            <option value="">自动识别</option><option value="js">JavaScript</option><option value="java">Java</option>
+          </select>
+          <button class="btn sm" id="btn-sc">开始检查</button>
+        </div>
+        <textarea id="sc-code" rows="10" placeholder="粘贴你的代码……（在编码/测试阶段的对话里贴代码块，我也会自动跑一次检查）" style="width:100%;font-family:Consolas,monospace;font-size:12.5px;padding:10px;border:1px solid var(--bd);border-radius:8px"></textarea>
+        <div class="rowflex gap8 mt8" style="flex-wrap:wrap">
+          <span class="faint" style="align-self:center;flex:1;min-width:120px">降噪：点掉不想报的规则</span>
+          <span id="sc-rule-toggles" class="rowflex gap8" style="flex-wrap:wrap"></span>
+        </div>
+        <div id="sc-result" class="mt12"></div>
+        <details class="mt12"><summary style="cursor:pointer;font-size:13px" class="faint">查看全部检查规则与规范依据（<span id="sc-rule-count">…</span> 条）</summary>
+          <div id="sc-rule-catalog" class="mt8"></div>
+        </details>
+      </div>
+
+      <div class="grid g2">
+        <div class="card">
+          <h3>单测执行<span class="sub">node:test 沙箱 · 测试文件由你编写</span></h3>
+          <div class="fld"><label>测试文件（.js，使用 node:test 与 node:assert）</label>
+            <textarea id="ut-code" rows="8" style="width:100%;font-family:Consolas,monospace;font-size:12.5px;padding:10px;border:1px solid var(--bd);border-radius:8px" placeholder="const { test } = require('node:test');&#10;const assert = require('node:assert');&#10;&#10;test('示例：两数相加', () => {&#10;  assert.equal(1 + 1, 2);&#10;});"></textarea></div>
+          <div class="fld"><label>被测代码文件（可选，与测试文件同目录）</label>
+            <textarea id="ut-src" rows="4" style="width:100%;font-family:Consolas,monospace;font-size:12.5px;padding:10px;border:1px solid var(--bd);border-radius:8px" placeholder="const util = require('./util.js');&#10;module.exports = { sum: (a,b) => a+b };（记得在测试文件里 require 它）"></textarea></div>
+          <div class="rowflex gap8">
+            <label class="faint" style="display:flex;align-items:center;gap:6px">
+              <input type="checkbox" id="ut-cov"> 输出覆盖率
+            </label>
+            <span class="sp" style="flex:1"></span>
+            <button class="btn sm" id="btn-ut">运行测试</button>
+          </div>
+          <div id="ut-result" class="mt12"></div>
+        </div>
+
+        <div class="card">
+          <h3>本组提交轨迹<span class="sub">只列事实 · 不评分不排名</span></h3>
+          <div id="git-view" class="loading">加载中…</div>
+        </div>
+      </div>
+
+      <div class="card mt12">
+        <h3>我的工具使用留痕<span class="sub">过程数据 · 可回传教师端</span></h3>
+        <div id="tool-runs"><div class="empty">暂无记录</div></div>
+      </div>
+    </div>
+
+    <!-- ============ 团队协作（M3） ============ -->
+    <div class="pane" id="pane-team">
+      <div class="card mb12">
+        <h3>组内进度同步<span class="sub">FR-304 · 只列事实 · 不评分不排名</span></h3>
+        <div id="team-progress"><div class="empty">加载中…</div></div>
+      </div>
+
+      <div class="card mb12">
+        <h3>每日站会<span class="sub">三问由你自己答 · 阻碍自动转待办并同步老师</span></h3>
+        <div class="rowflex gap8 mb12">
+          <button class="btn sm" id="btn-standup">开启/刷新今日站会</button>
+          <span class="faint" id="standup-date"></span>
+        </div>
+        <div id="standup-facts" class="mb12"></div>
+        <div class="grid g2">
+          <div class="fld"><label>昨天做了什么（对照提交记录说）</label>
+            <textarea id="su-y" rows="2" style="width:100%;padding:8px;border:1px solid var(--bd);border-radius:8px"></textarea></div>
+          <div class="fld"><label>今天准备做什么</label>
+            <textarea id="su-t" rows="2" style="width:100%;padding:8px;border:1px solid var(--bd);border-radius:8px"></textarea></div>
+        </div>
+        <div class="fld mt8"><label>有什么阻碍（没有填「无」）</label>
+          <input id="su-b" placeholder="具体说卡在哪一步；没有阻碍填「无」" style="width:100%;padding:8px;border:1px solid var(--bd);border-radius:8px"></div>
+        <button class="btn sm mt8" id="btn-su-submit">提交我的三问</button>
+        <div id="su-result" class="mt12"></div>
+      </div>
+
+      <div class="grid g2 mb12">
+        <div class="card">
+          <h3>角色扮演 · 答辩预演<span class="sub">PO / 客户 / 评委 · 结束后给观察反馈</span></h3>
+          <div class="rowflex gap8 mb12">
+            <select id="rp-role" style="padding:6px 9px;border:1px solid var(--bd);border-radius:8px">
+              <option value="customer">客户（需求博弈）</option>
+              <option value="po">产品负责人</option>
+              <option value="judge">答辩评委</option>
+            </select>
+            <button class="btn sm" id="btn-rp-start">开始扮演</button>
+          </div>
+          <div id="rp-chat" style="max-height:260px;overflow:auto;border:1px solid var(--bd);border-radius:8px;padding:8px;font-size:13px"></div>
+          <div class="rowflex gap8 mt8">
+            <input id="rp-inp" placeholder="向对方提问……" style="flex:1;padding:8px;border:1px solid var(--bd);border-radius:8px">
+            <button class="btn sm" id="btn-rp-send">说</button>
+            <button class="btn sm ghost" id="btn-rp-end">结束并看反馈</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>贡献度互评<span class="sub">事实清单 + 行为影响句式 · 不打分不排名</span></h3>
+          <div id="pr-facts" class="mb12"></div>
+          <div class="rowflex gap8 mb8">
+            <select id="pr-target" style="padding:6px 9px;border:1px solid var(--bd);border-radius:8px"></select>
+          </div>
+          <textarea id="pr-note" rows="3" placeholder="他做了什么 + 这对项目造成了什么影响（禁止打分与排名表述）" style="width:100%;padding:8px;border:1px solid var(--bd);border-radius:8px"></textarea>
+          <button class="btn sm mt8" id="btn-pr-submit">提交评价</button>
+          <div id="pr-result" class="mt12"></div>
+        </div>
+      </div>
+
+      <div class="grid g2">
+        <div class="card">
+          <h3>小组复盘<span class="sub">正文你们自己写 · 系统聚合成长档案与补学清单</span></h3>
+          <div class="fld"><label>做得好（具体到事）</label>
+            <textarea id="rt-good" rows="2" style="width:100%;padding:8px;border:1px solid var(--bd);border-radius:8px"></textarea></div>
+          <div class="fld mt8"><label>待改进（说事不说人）</label>
+            <textarea id="rt-improve" rows="2" style="width:100%;padding:8px;border:1px solid var(--bd);border-radius:8px"></textarea></div>
+          <div class="fld mt8"><label>下一步行动（谁 + 什么时候前 + 做什么）</label>
+            <textarea id="rt-action" rows="2" style="width:100%;padding:8px;border:1px solid var(--bd);border-radius:8px"></textarea></div>
+          <button class="btn sm mt8" id="btn-rt-submit">提交复盘</button>
+          <div id="rt-result" class="mt12"></div>
+        </div>
+
+        <div class="card">
+          <h3>团队待办<span class="sub">站会阻碍 · 复盘行动项</span></h3>
+          <div id="todos-view"><div class="empty">暂无待办</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 我的产出物 ============ -->
+    <div class="pane" id="pane-artifacts">
+      <div class="card"><h3>小组产出物<span class="sub">含版本历史</span></h3><div id="arts"></div></div>
+    </div>
+
+    <!-- ============ 我的画像 ============ -->
+    <div class="pane" id="pane-profile">
+      <div class="grid g2">
+        <div class="card"><h3>学习者画像<span class="sub">透明原则 · 可申诉</span></h3><div id="prof"></div></div>
+        <div class="card"><h3>申诉修正</h3>
+          <div class="fld"><label>基础水平</label>
+            <select id="ap-level"><option>初学</option><option>进阶</option></select></div>
+          <div class="fld"><label>偏好讲解方式</label>
+            <select id="ap-style"><option>类比</option><option>示例</option><option>拆解</option></select></div>
+          <div class="fld"><label>理由</label><input id="ap-reason" placeholder="例如：我有过项目经验，基础水平应为进阶"></div>
+          <button class="btn sm" id="btn-appeal">提交申诉</button>
+          <div class="faint mt12">申诉会写入审计日志，供教师核对。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 消息与设置 ============ -->
+    <div class="pane" id="pane-inbox">
+      <div class="grid g2">
+        <div class="card"><h3>收件箱<span class="sub">主动触达</span></h3><div id="inbox"></div></div>
+        <div class="card"><h3>触达设置</h3>
+          <div class="rowflex">
+            <span class="muted" style="flex:1">关闭后不再接收系统的主动提醒（每日 ≤2 次，22:00–08:00 静默）</span>
+            <button class="btn gh sm" id="btn-mute">关闭主动触达</button>
+          </div>
+          <div class="note mt12">教师的一键干预消息不受此开关影响。</div>
+        </div>
+      </div>
+      <div class="card mt12">
+        <h3>我的周报<span class="sub">FR-403 · 只汇总事实与自评，不做评分排名</span></h3>
+        <div class="rowflex gap8 mb12">
+          <button class="btn sm" id="btn-weekly">生成本周周报</button>
+          <span class="faint" id="weekly-range"></span>
+        </div>
+        <div id="weekly-view"><div class="empty">点击上方按钮，按本周实际提交与会话记录生成</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+var U = ZT.guard(['student','leader']);
+if (!U) throw new Error('unauthorized');
+
+var S = {
+  stageCfg: null, sessionId: null, stage: 'requirements', level: 0, cap: 2,
+  draft: {}, messages: [], q:0, a:0, u:0, trace: [], nodeId: null,
+};
+
+var INVEST_STATE = {};
+
+/* ---------- 初始化 ---------- */
+async function boot(){
+  ZT.topbar('知途伴学 · 学生端', U, '<span class="pill g">导学，不代做</span>');
+  ZT.tabs('tabs', function(key){
+    if (key === 'artifacts') loadArtifacts();
+    if (key === 'profile') loadProfile();
+    if (key === 'inbox') loadInbox();
+    if (key === 'goals') loadGoals();
+    if (key === 'tools') { loadGit(); loadToolRuns(); if (!window.__scRulesLoaded){ window.__scRulesLoaded = true; loadStaticRules(); } }
+    if (key === 'team') loadTeam();
+  });
+
+  var st = await ZT.get('/api/v1/stages');
+  S.stages = st.stages;
+  var sel = document.getElementById('stage-sel');
+  sel.innerHTML = st.stages.map(function(s){
+    return '<option value="'+s.key+'">'+ZT.esc(s.name)+'</option>';
+  }).join('');
+  sel.onchange = function(){ openSession(sel.value); };
+
+  document.getElementById('send').onclick = send;
+  document.getElementById('inp').onkeydown = function(e){ if(e.key==='Enter') document.getElementById('send').click(); };
+  document.getElementById('stuck').onclick = stuck;
+  document.getElementById('btn-export').onclick = doExport;
+  document.getElementById('btn-appeal').onclick = appeal;
+  document.getElementById('btn-mute').onclick = toggleMute;
+  document.getElementById('ask-unlock').onclick = requestUnlock;
+  document.getElementById('btn-sc').onclick = runStaticCheck;
+  document.getElementById('btn-ut').onclick = runUnitTests;
+  document.getElementById('btn-standup').onclick = openStandup;
+  document.getElementById('btn-su-submit').onclick = submitStandup;
+  document.getElementById('btn-rp-start').onclick = startRoleplay;
+  document.getElementById('btn-rp-send').onclick = rpSend;
+  document.getElementById('btn-rp-end').onclick = rpEnd;
+  document.getElementById('btn-pr-submit').onclick = submitReview;
+  document.getElementById('btn-rt-submit').onclick = submitRetro;
+  document.getElementById('rp-inp').onkeydown = function(e){ if(e.key==='Enter') document.getElementById('btn-rp-send').click(); };
+
+  /* FR-401 学习节拍 */
+  document.getElementById('btn-goal-add').onclick = addGoal;
+  document.getElementById('goal-new').onkeydown = function(e){ if(e.key==='Enter') addGoal(); };
+  /* FR-403 周报 */
+  document.getElementById('btn-weekly').onclick = loadWeekly;
+  /* FR-105 多模态附件 */
+  document.getElementById('btn-attach').onclick = function(){ document.getElementById('file-input').click(); };
+  document.getElementById('file-input').onchange = onFilesPicked;
+  /* FR-101 历史会话接续 */
+  document.getElementById('hist-sessions').onchange = function(e){ if(e.target.value) switchSession(e.target.value); };
+
+  await openSession('requirements');
+  await loadHistory();
+}
+
+function cfgOf(key){ return (S.stages||[]).find(function(x){return x.key===key}); }
+
+/* ---------- 会话 ---------- */
+async function openSession(stage){
+  try {
+    var r = await ZT.post('/api/v1/sessions', { stage: stage, channel: 'web' });
+    S.sessionId = r.session.sessionId;
+    S.stage = r.session.stage;
+    S.level = r.session.level || 0;
+    S.cap = r.session.capLevel;
+    S.draft = r.session.draft || {};
+    S.nodeId = r.session.nodeId;
+    S.stageCfg = cfgOf(r.session.stage);
+    S.messages = r.messages || [];
+    document.getElementById('stage-sel').value = r.session.stage;
+    renderStage();
+    renderMessages();
+    renderArtifacts();
+    renderTrace();
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+function renderStage(){
+  var c = S.stageCfg; if(!c) return;
+  document.getElementById('stage-name').textContent = c.name;
+  document.getElementById('stage-goal').textContent = c.goal;
+  document.getElementById('art-name').textContent = c.artifactName;
+  document.getElementById('cap-text').textContent = 'L'+S.cap;
+  document.getElementById('cap-src').textContent = '';
+
+  document.getElementById('steps').innerHTML = c.nodes.map(function(n){
+    var cls = 'step';
+    var idx = c.nodes.findIndex(function(x){return x.id===S.nodeId});
+    var ni = c.nodes.findIndex(function(x){return x.id===n.id});
+    if (S.nodeId === '__done__') cls += ' done';
+    else if (ni < idx) cls += ' done';
+    else if (ni === idx) cls += ' on';
+    return '<span class="'+cls+'">'+ZT.esc(n.title)+'</span>';
+  }).join('');
+  var pct = S.nodeId === '__done__' ? 100 : Math.round(((c.nodes.findIndex(function(x){return x.id===S.nodeId})+1)/c.nodes.length)*100);
+  document.getElementById('progbar').style.width = pct + '%';
+
+  document.getElementById('redlines').innerHTML = c.redLines.map(function(r){
+    return '<li><span class="mk warn">!</span><span>'+ZT.esc(r)+'</span></li>';
+  }).join('');
+
+  document.getElementById('inv-card').style.display = c.invest ? '' : 'none';
+  if (c.invest) renderInvest(c.invest);
+}
+
+function renderInvest(inv){
+  var box = document.getElementById('inv');
+  box.innerHTML = Object.keys(inv).map(function(k){
+    var st = INVEST_STATE[k] || 'pend';
+    var m = st==='ok' ? '✓' : (st==='warn' ? '!' : '·');
+    return '<li><span class="mk '+st+'">'+m+'</span><span><span class="lb">'+ZT.esc(inv[k].label)+
+      '</span><br><span class="nt muted">'+ZT.esc(inv[k].tip)+'</span></span></li>';
+  }).join('');
+}
+
+function renderMessages(){
+  var box = document.getElementById('msgs');
+  box.innerHTML = '';
+  S.messages.forEach(function(m){
+    addBubble(m.role, m.content, m.level, { engine: m.engine, model: m.modelVer });
+  });
+  box.scrollTop = box.scrollHeight;
+  document.getElementById('lvl').textContent = ZT.LEVELS[S.level] || 'L0';
+  document.getElementById('lv-text').textContent = 'L'+S.level;
+  document.getElementById('m-l').textContent = 'L'+S.level;
+  document.getElementById('m-q').textContent = S.messages.filter(function(m){return m.role==='agent'}).length;
+  document.getElementById('m-a').textContent = S.messages.filter(function(m){return m.role==='student'}).length;
+  renderOptions();
+}
+
+/** 顶栏常驻指示：当前会话最近一轮的生成来源 */
+function renderEngineTag(src){
+  var el = document.getElementById('engine-tag');
+  if (!el) return;
+  if (!src || !src.engine){ el.textContent = '—'; el.className = 'tag'; return; }
+  if (src.engine === 'llm'){
+    el.textContent = '大模型' + (src.cached ? '（缓存）' : '') + (src.modelLatencyMs ? ' ' + src.modelLatencyMs + 'ms' : '');
+    el.className = 'tag ok';
+    el.title = '模型：' + src.model + '\n本轮调用 ' + src.modelLatencyMs + 'ms'
+      + (src.cached ? '\n命中缓存，未产生费用' : '')
+      + '\n节点推进、层级、草稿抽取由规则骨架决定，模型仅生成话术文本';
+  } else if (src.fallback){
+    el.textContent = '规则引擎（模型降级）';
+    el.className = 'tag warn';
+    el.title = '已调用大模型但失败：' + (src.modelError || '超时或返回非法内容') + '\n已自动回落规则引擎，不影响使用';
+  } else if (src.ruleOnly){
+    el.textContent = '规则引擎（合规场景）';
+    el.className = 'tag';
+    el.title = '概念讲解 / 报错诊断 / 产出物评审由规则引擎负责，保证可预期、可复现';
+  } else {
+    el.textContent = '规则引擎';
+    el.className = 'tag';
+    el.title = src.llmEnabled === false ? '未启用大模型或未配置 API Key' : '本轮走规则引擎';
+  }
+}
+
+/**
+ * 来源标签：把「这条回复到底是谁写的」直接标在气泡上。
+ * 这是确认大模型是否真正生效的最直观证据——不用查日志、不用跑脚本。
+ */
+function srcLabel(src){
+  if (!src || !src.engine) return '';
+  if (src.engine === 'llm'){
+    var t = '大模型';
+    if (src.model && src.model !== 'rule-engine-v1') t += ' · ' + src.model.replace(/^.*\//, '');
+    if (src.modelLatencyMs) t += ' · ' + src.modelLatencyMs + 'ms';
+    if (src.cached) t += ' · 缓存';
+    if (src.emptyText) t += ' · 空文本回落';
+    return '<span class="src llm" title="话术文本由大模型生成；节点推进/层级/草稿抽取仍由规则骨架决定">'+ZT.esc(t)+'</span>';
+  }
+  if (src.fallback) {
+    var f = '规则引擎 · 模型降级' + (src.modelError ? '（'+ZT.esc(src.modelError)+'）' : '');
+    return '<span class="src fall" title="已调用大模型但超时或返回非法，自动回落规则引擎">'+f+'</span>';
+  }
+  if (src.ruleOnly) return '<span class="src rule" title="概念讲解/报错诊断/产出物评审由规则引擎负责，保证可预期与可复现">规则引擎 · 合规场景</span>';
+  return '<span class="src rule">规则引擎</span>';
+}
+
+function addBubble(role, html, level, src){
+  var box = document.getElementById('msgs');
+  if (role === 'system'){
+    var s = document.createElement('div'); s.className='sys'; s.textContent = html; box.appendChild(s);
+  } else {
+    var r = document.createElement('div'); r.className = 'row ' + (role==='student'?'me':'agent');
+    var a = document.createElement('div'); a.className='av'; a.textContent = role==='student' ? '我' : '知';
+    var b = document.createElement('div'); b.className='bub'; b.innerHTML = ZT.fmt(html);
+    r.appendChild(a); r.appendChild(b);
+    if (role==='agent' && level !== null && level !== undefined){
+      var t = document.createElement('div'); t.className='lvtag'; t.textContent = 'L'+level+' 输出';
+      b.appendChild(t);
+    }
+    if (role==='agent' && src){
+      var lab = srcLabel(src);
+      if (lab){ var d = document.createElement('div'); d.className='srcbox'; d.innerHTML = lab; b.appendChild(d); }
+    }
+    box.appendChild(r);
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+function renderOptions(){
+  var c = S.stageCfg; var o = document.getElementById('opts');
+  o.innerHTML = '';
+  if (!c || S.nodeId === '__done__') return;
+  var node = c.nodes.find(function(n){return n.id===S.nodeId});
+  if (!node || !node.options || !node.options.length) return;
+  node.options.forEach(function(t){
+    var b = document.createElement('button'); b.className='opt'; b.textContent = t;
+    b.onclick = function(){ o.innerHTML=''; sendText(t); };
+    o.appendChild(b);
+  });
+}
+
+function renderTrace(){
+  var box = document.getElementById('tr');
+  if (!box) return;
+  box.innerHTML = S.trace.length
+    ? S.trace.map(function(x){return '<li>'+ZT.esc(x)+'</li>'}).join('')
+    : '<li class="muted">本轮暂无轨迹，对话开始后自动记录</li>';
+}
+
+function trace(t){
+  S.trace.unshift(t);
+  if (S.trace.length > 7) S.trace.pop();
+  renderTrace();
+}
+
+/* ---------- 交互 ---------- */
+async function send(){
+  var v = document.getElementById('inp').value.trim();
+  if (!v && !ATTACH.length) return;
+  document.getElementById('inp').value = '';
+  await sendText(v, ATTACH.slice());
+  ATTACH = []; renderAttachChips();
+}
+
+async function sendText(text, attachments){
+  addBubble('student', text || '（上传了附件）', null);
+  trace('我：' + String(text || '附件').slice(0, 24));
+  try {
+    // FR-105：附件随消息一起提交，后端做结构化解析与低置信度反问
+    var r = await ZT.post('/api/v1/sessions/'+S.sessionId+'/messages', {
+      text: text, attachments: attachments || []
+    });
+    applyReply(r);
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function stuck(){
+  try {
+    var r = await ZT.post('/api/v1/sessions/'+S.sessionId+'/upgrade', {});
+    S.u++;
+    if (r.capped){
+      addBubble('system', '已达本轮介入上限 L'+S.cap+'，需教师授权', null);
+      var rb = document.getElementById('reqbox');
+      document.getElementById('req-text').textContent = '已生成解锁申请：卡在「'+
+        (S.stageCfg.nodes.find(function(n){return n.id===S.nodeId})||{title:''}).title + '」，申请至 L'+Math.min(4,S.level+1);
+      rb.classList.add('on');
+      trace('申请教师解锁');
+      document.getElementById('m-u').textContent = S.u;
+      ZT.toast('已提交解锁申请，等待教师审批','ok');
+      return;
+    }
+    addBubble('system', '求助升级 → ' + (ZT.LEVELS[r.level]||''), null);
+    applyReply({ reply: { text: r.text, level: r.level }, context: {} , session: { level: r.level, draft: null }});
+    trace('升级至 ' + (ZT.LEVELS[r.level]||''));
+    document.getElementById('m-u').textContent = S.u;
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+function applyReply(r){
+  S.level = (r.session && r.session.level !== undefined) ? r.session.level : (r.reply ? r.reply.level : S.level);
+  if (r.session && r.session.draft) S.draft = r.session.draft;
+  if (r.session && r.session.nodeId) S.nodeId = r.session.nodeId;
+  addBubble('agent', r.reply.text, r.reply.level, r.source || (r.context && r.context.source));
+  renderEngineTag(r.source || (r.context && r.context.source));
+  if (r.context && r.context.capLevel !== undefined) S.cap = r.context.capLevel;
+  if (r.reply.needUnlock){
+    var rb = document.getElementById('reqbox');
+    document.getElementById('req-text').textContent = '本轮教师设定的封顶层是 L'+S.cap+'，如需更完整的讲解可提交解锁申请。';
+    rb.classList.add('on');
+  }
+  if (r.reply.needHuman) trace('建议转人工辅导');
+  if (r.reply.knowledgeTags && r.reply.knowledgeTags.length) trace('知识点：' + r.reply.knowledgeTags.join('、'));
+  renderStage();
+  renderArtifacts();
+  refreshCounts();
+  if (r.reply.stageComplete) ZT.toast('本阶段已完成，产出物已归档','ok');
+}
+
+function refreshCounts(){
+  fetch('/api/v1/sessions/'+S.sessionId, {headers:{Authorization:'Bearer '+ZT.getToken()}})
+    .then(function(x){return x.json()})
+    .then(function(d){
+      S.messages = d.messages || [];
+      S.draft = d.draft || S.draft;
+      document.getElementById('m-q').textContent = S.messages.filter(function(m){return m.role==='agent'}).length;
+      document.getElementById('m-a').textContent = S.messages.filter(function(m){return m.role==='student'}).length;
+      renderArtifacts();
+    }).catch(function(){});
+}
+
+function renderArtifacts(){
+  var c = S.stageCfg; if(!c) return;
+  var box = document.getElementById('art-fields');
+  box.innerHTML = c.artifactFields.map(function(f){
+    var v = S.draft[f.key] || '';
+    return '<dt>'+ZT.esc(f.label)+'</dt><dd class="'+(v?'':'empty')+'">'+ZT.esc(v || '未确定')+'</dd>';
+  }).join('');
+  if (c.invest){
+    var d = S.draft || {};
+    INVEST_STATE['V'] = d.value ? 'ok' : 'pend';
+    INVEST_STATE['T'] = d.acceptance ? 'ok' : 'pend';
+    INVEST_STATE['I'] = d.role ? 'ok' : 'pend';
+    renderInvest(c.invest);
+  }
+}
+
+async function requestUnlock(){
+  try{
+    await ZT.post('/api/v1/unlock-requests', { sessionId: S.sessionId, targetLevel: 4, reason: '连续卡壳，申请更完整讲解' });
+    ZT.toast('解锁申请已提交，等待教师审批','ok');
+    trace('提交解锁申请');
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function doExport(){
+  try{
+    var r = await ZT.get('/api/v1/sessions/'+S.sessionId+'/export');
+    ZT.downloadText(r.filename, r.markdown, 'text/markdown');
+    ZT.toast('已导出','ok');
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+/* ---------- 其他面板 ---------- */
+async function loadArtifacts(){
+  var box = document.getElementById('arts');
+  box.innerHTML = '<div class="loading">加载中…</div>';
+  try{
+    var r = await ZT.get('/api/v1/artifacts');
+    if (!r.artifacts.length){ box.innerHTML = '<div class="empty">暂无产出物，完成一个阶段后自动生成</div>'; return; }
+    box.innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>阶段</th><th>类型</th><th>版本</th><th>内容</th><th>时间</th></tr></thead><tbody>'+
+      r.artifacts.map(function(a){
+        var c = a.content || {};
+        var brief = Object.keys(c).filter(function(k){return c[k]}).slice(0,3).map(function(k){return ZT.esc(String(c[k]).slice(0,40))}).join(' / ');
+        return '<tr><td>'+ZT.esc(a.stageName||a.stage)+'</td><td>'+ZT.esc(a.type)+'</td><td>v'+a.version+'</td><td>'+brief+'</td><td>'+ZT.ts(a.created_at)+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+  }catch(e){ box.innerHTML = '<div class="empty">'+ZT.esc(e.message)+'</div>'; }
+}
+
+async function loadProfile(){
+  try{
+    var r = await ZT.get('/api/v1/student/profile');
+    var p = r.profile;
+    document.getElementById('prof').innerHTML =
+      '<dl class="kv">'+
+      '<dt>基础水平</dt><dd>'+ZT.esc(p.baseLevel)+'</dd>'+
+      '<dt>偏好方式</dt><dd>'+ZT.esc(p.preferStyle)+'</dd>'+
+      '<dt>平均轮次</dt><dd>'+p.avgTurns+' 轮</dd>'+
+      '<dt>层级分布</dt><dd>'+ZT.esc(JSON.stringify(p.levelDistribution))+'</dd>'+
+      '<dt>卡点标签</dt><dd>'+(p.stuckTags.length? p.stuckTags.map(function(t){return ZT.esc(t.name)+'×'+t.count}).join('、') : '暂无')+'</dd>'+
+      '</dl>';
+    document.getElementById('ap-level').value = p.baseLevel;
+    document.getElementById('ap-style').value = p.preferStyle;
+    document.getElementById('btn-mute').textContent = r.muted ? '开启主动触达' : '关闭主动触达';
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function appeal(){
+  try{
+    await ZT.post('/api/v1/student/profile/appeal', {
+      baseLevel: document.getElementById('ap-level').value,
+      preferStyle: document.getElementById('ap-style').value,
+      reason: document.getElementById('ap-reason').value
+    });
+    ZT.toast('申诉已提交','ok');
+    loadProfile();
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function toggleMute(){
+  try{
+    var r = await ZT.get('/api/v1/student/profile');
+    var out = await ZT.post('/api/v1/student/outreach/mute', { muted: !r.muted });
+    document.getElementById('btn-mute').textContent = out.muted ? '开启主动触达' : '关闭主动触达';
+    ZT.toast(out.muted ? '已关闭主动触达' : '已开启主动触达','ok');
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function loadInbox(){
+  try{
+    var r = await ZT.get('/api/v1/student/inbox');
+    var box = document.getElementById('inbox');
+    if (!r.items.length){ box.innerHTML = '<div class="empty">暂无消息</div>'; return; }
+    box.innerHTML = r.items.map(function(i){
+      return '<div class="note"><b>'+ZT.esc(i.ruleName)+'</b> · '+ZT.timeAgo(i.sentAt)+'<br>'+ZT.esc(i.text)+'</div>';
+    }).join('');
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+/* ==================== FR-401 学习节拍器 ==================== */
+var GOALS = { today: [], recent: [] };
+
+async function loadGoals(){
+  try{
+    var r = await ZT.get('/api/v1/student/goals');
+    GOALS = r;
+    var s = r.stats || {};
+    document.getElementById('goal-stats').innerHTML =
+      met('已完成', s.done || 0, 'g') + met('进行中', s.open || 0, '') +
+      met('未完成', s.missed || 0, 'w') + met('近7天合计', s.total || 0, '');
+
+    document.getElementById('goal-today').innerHTML = r.today.length
+      ? '<div class="tbl-wrap"><table><thead><tr><th>微目标</th><th>来源节点</th><th>状态</th><th style="width:190px">打卡</th></tr></thead><tbody>' +
+        r.today.map(function(g){
+          return '<tr><td>'+ZT.esc(g.content)+'</td>'+
+            '<td class="faint" style="font-size:12px">'+(g.stageName||g.stage||'—')+(g.nodeId?' · '+ZT.esc(g.nodeId):'')+'</td>'+
+            '<td>'+goalPill(g.status)+'</td>'+
+            '<td>'+(g.status==='open'
+              ? '<button class="btn xs" data-gd="'+g.id+'" data-st="done">完成</button> '+
+                '<button class="btn xs gh" data-gd="'+g.id+'" data-st="missed">未完成</button>'
+              : '<span class="faint" style="font-size:12px">'+ZT.esc(g.reason||'已打卡')+'</span>')+'</td></tr>';
+        }).join('') + '</tbody></table></div>'
+      : '<div class="empty">今天还没有微目标——在下方自建一条，或先开一段对话由系统按阶段拆解</div>';
+
+    document.querySelectorAll('#goal-today button[data-gd]').forEach(function(b){
+      b.onclick = function(){ goalCheckin(b.dataset.gd, b.dataset.st); };
+    });
+
+    document.getElementById('goal-recent').innerHTML = r.recent.length
+      ? '<div class="tbl-wrap"><table><thead><tr><th>日期</th><th>微目标</th><th>状态</th><th>原因</th></tr></thead><tbody>' +
+        r.recent.map(function(g){
+          return '<tr><td class="faint">'+ZT.esc(g.date)+'</td><td>'+ZT.esc(g.content)+'</td>'+
+            '<td>'+goalPill(g.status)+'</td><td class="faint" style="font-size:12px">'+ZT.esc(g.reason||'—')+'</td></tr>';
+        }).join('') + '</tbody></table></div>'
+      : '<div class="empty">暂无历史记录</div>';
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+function met(label, val, cls){
+  return '<div class="met"><div class="v '+cls+'">'+val+'</div><div class="k">'+label+'</div></div>';
+}
+function goalPill(st){
+  if (st==='done') return '<span class="pill g">已完成</span>';
+  if (st==='missed') return '<span class="pill w">未完成</span>';
+  return '<span class="pill">进行中</span>';
+}
+
+async function addGoal(){
+  var inp = document.getElementById('goal-new');
+  var v = inp.value.trim();
+  if (!v){ ZT.toast('先写一句今天能做完的事','err'); return; }
+  try{
+    await ZT.post('/api/v1/student/goals', { content: v, stage: S.stage, nodeId: S.nodeId });
+    inp.value = '';
+    loadGoals();
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function goalCheckin(id, status){
+  var reason = null;
+  if (status === 'missed'){
+    reason = prompt('没完成的原因是什么？（拆大了 / 某一步比预想难 / 被打断…）');
+    if (reason === null) return;
+    if (!reason.trim()){ ZT.toast('写一句原因才能记录','err'); return; }
+  }
+  try{
+    var r = await ZT.post('/api/v1/student/goals/'+id+'/checkin', { status: status, reason: reason });
+    if (r.feedback) ZT.toast(r.feedback.text, r.feedback.kind === 'ok' ? 'ok' : 'warn');
+    loadGoals();
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+/* ==================== FR-304 组内进度同步 ==================== */
+async function loadTeamProgress(){
+  var box = document.getElementById('team-progress');
+  try{
+    var r = await ZT.get('/api/v1/team/progress');
+    if (!r.members || !r.members.length){ box.innerHTML = '<div class="empty">你还没有加入小组</div>'; return; }
+    box.innerHTML =
+      '<div class="faint" style="font-size:12px;margin-bottom:8px">' + ZT.esc(r.groupName||r.groupId||'') +
+      ' · Sprint ' + (r.sprintNo||1) + ' · 当前阶段：' + ZT.esc(r.currentStage||'—') + '</div>' +
+      '<div class="tbl-wrap"><table><thead><tr><th>组员</th><th>所在阶段</th><th>进度</th><th>未解卡点</th></tr></thead><tbody>' +
+      r.members.map(function(m){
+        return '<tr><td>'+ZT.esc(m.name)+(m.isLeader?' <span class="pill g">组长</span>':'')+'</td>'+
+          '<td>'+ZT.esc(m.stageName||m.stage)+'<br><span class="faint" style="font-size:11px">'+ZT.esc(m.nodeTitle||'')+'</span></td>'+
+          '<td><div class="bar" style="height:6px;background:#eef2f7;border-radius:4px;overflow:hidden;min-width:70px">' +
+            '<div style="width:'+(m.progressPercent||0)+'%;height:100%;background:var(--pri,#3b6ef6)"></div></div>' +
+            '<span class="faint" style="font-size:11px">'+(m.progressPercent||0)+'%</span></td>'+
+          '<td>'+(m.openStuck ? '<span class="pill w">'+m.openStuck+' 个</span>' : '<span class="faint">—</span>')+'</td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<div class="note" style="margin-top:8px;font-size:12px">只列事实（阶段、进度、卡点数），不含评分与排名。</div>';
+  }catch(e){ box.innerHTML = '<div class="empty">'+ZT.esc(e.message)+'</div>'; }
+}
+
+/* ==================== FR-403 学生周报 ==================== */
+async function loadWeekly(){
+  var box = document.getElementById('weekly-view');
+  box.innerHTML = '<div class="empty">生成中…</div>';
+  try{
+    var r = await ZT.get('/api/v1/student/weekly');
+    var p = r.progress || {};
+    var since = r.since ? new Date(r.since) : null;
+    document.getElementById('weekly-range').textContent = since
+      ? ('统计起点：' + since.getFullYear() + '-' + String(since.getMonth()+1).padStart(2,'0') + '-' + String(since.getDate()).padStart(2,'0') + '（近 7 天）')
+      : '';
+
+    var topics = r.helpTopics || [];
+    var dist = r.stuckDistribution || {};
+    var distRows = Object.keys(dist).map(function(k){
+      return '<tr><td>'+ZT.esc(k)+'</td><td>'+dist[k]+' 次</td></tr>';
+    }).join('');
+    var todos = r.todos || [];
+
+    box.innerHTML =
+      '<div class="mets mb12" style="grid-template-columns:repeat(4,1fr);gap:8px">' +
+        met('7天提交', p.commits7d || 0, '') +
+        met('产出物', p.artifacts7d || 0, '') +
+        met('已解卡点', p.resolved || 0, 'g') +
+        met('未解卡点', p.open || 0, 'w') + '</div>' +
+
+      '<div class="note mb8"><b>求助主题</b><br>' +
+        (topics.length ? topics.map(function(t){
+            return typeof t === 'string' ? ZT.esc(t) : ZT.esc(t.topic || t.name || '') + (t.count ? '（'+t.count+'次）' : '');
+          }).join('；') : '本周没有求助记录') + '</div>' +
+
+      (distRows ? '<div class="tbl-wrap mb8"><table><thead><tr><th>卡点分布</th><th>次数</th></tr></thead><tbody>' +
+        distRows + '</tbody></table></div>' : '') +
+
+      '<div class="note"><b>待办与行动项</b><br>' +
+        (todos.length ? todos.map(function(t){
+            return (t.status==='done'?'✔ ':'○ ') + ZT.esc(t.text) +
+              '（来自' + (t.source==='standup'?'站会阻碍':'复盘') + '）';
+          }).join('<br>') : '本周没有新增待办') + '</div>' +
+
+      '<div class="note mt12" style="font-size:12px">周报只汇总事实与自评，不含评分与排名。</div>';
+  }catch(e){ box.innerHTML = '<div class="empty">'+ZT.esc(e.message)+'</div>'; }
+}
+
+/* ==================== FR-105 多模态附件 ==================== */
+var ATTACH = [];
+function onFilesPicked(e){
+  var files = Array.from(e.target.files || []);
+  files.forEach(function(f){
+    var reader = new FileReader();
+    var isText = /\.(js|mjs|cjs|ts|java|py|json|md|txt|csv|html|css|xml|yml|yaml|sql)$/i.test(f.name);
+    reader.onload = function(){
+      ATTACH.push({
+        name: f.name, mime: f.type || '', size: f.size,
+        content: isText ? String(reader.result).slice(0, 200000) : null,
+      });
+      renderAttachChips();
+    };
+    if (isText) reader.readAsText(f); else reader.readAsDataURL(f);
+  });
+  e.target.value = '';
+}
+function renderAttachChips(){
+  document.getElementById('attach-chips').innerHTML = ATTACH.map(function(a, i){
+    return '<span class="pill" style="cursor:pointer">📎 '+ZT.esc(a.name)+' ✕</span>';
+  }).join('');
+  document.querySelectorAll('#attach-chips .pill').forEach(function(el, i){
+    el.onclick = function(){ ATTACH.splice(i,1); renderAttachChips(); };
+  });
+}
+
+/* ==================== FR-101 历史会话接续 ==================== */
+async function loadHistory(){
+  try{
+    var r = await ZT.get('/api/v1/sessions');
+    var sel = document.getElementById('hist-sessions');
+    var list = r.sessions || [];
+    sel.innerHTML = '<option value="">历史会话…</option>' + list.map(function(s){
+      return '<option value="'+s.sessionId+'">'+ZT.esc(s.stageName||s.stage)+' · '+ZT.timeAgo(s.lastAt)+'</option>';
+    }).join('');
+  }catch(e){ /* 静默：历史列表失败不影响主流程 */ }
+}
+
+async function switchSession(id){
+  try{
+    var r = await ZT.get('/api/v1/sessions/'+id);
+    S.sessionId = r.session.sessionId;
+    S.stage = r.session.stage;
+    S.level = r.session.level || 0;
+    S.cap = r.session.capLevel || r.session.cap || 2;
+    S.draft = r.session.draft || {};
+    S.nodeId = r.session.nodeId;
+    S.stageCfg = cfgOf(r.session.stage);
+    S.messages = r.messages || [];
+    document.getElementById('stage-sel').value = r.session.stage;
+    renderStage(); renderMessages(); renderArtifacts(); renderTrace();
+    ZT.toast('已切换到历史会话，上下文接续', 'ok');
+  }catch(e){ ZT.toast(e.message,'err'); }
+}
+
+/* ---------- 工具箱（M2） ---------- */
+
+/* 规则目录加载：降噪开关（默认全开）+ 规范依据明细 */
+var SC_DISABLED = {};
+async function loadStaticRules(){
+  try{
+    var r = await ZT.get('/api/v1/tools/static-rules');
+    var sevName = { error: '错误', warn: '警告', info: '提示' };
+    document.getElementById('sc-rule-count').textContent = r.rules.length;
+    document.getElementById('sc-rule-toggles').innerHTML = r.rules.map(function(x){
+      return '<label class="faint" style="display:inline-flex;align-items:center;gap:4px;font-size:12px">' +
+        '<input type="checkbox" data-sc-rule="' + x.code + '" checked> ' + ZT.esc(x.name) + '</label>';
+    }).join('');
+    document.getElementById('sc-rule-toggles').addEventListener('change', function(e){
+      var code = e.target.getAttribute('data-sc-rule');
+      if (code) SC_DISABLED[code] = !e.target.checked;
+    });
+    document.getElementById('sc-rule-catalog').innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>规则</th><th>级别</th><th>语言</th><th>规范依据与整改方向</th></tr></thead><tbody>' +
+      r.rules.map(function(x){
+        return '<tr><td>' + ZT.esc(x.name) + '<br><span class="faint" style="font-size:11px">' + x.code + '</span></td>' +
+          '<td>' + sevName[x.severity] + '</td><td>' + x.langs.join('/') + '</td>' +
+          '<td class="faint" style="font-size:12px">' + ZT.esc(x.guidance) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }catch(e){ /* 目录加载失败不阻塞工具使用 */ }
+}
+
+async function runStaticCheck(){
+  var code = document.getElementById('sc-code').value;
+  if (!code.trim()){ ZT.toast('先粘贴一段代码', 'err'); return; }
+  var box = document.getElementById('sc-result');
+  box.innerHTML = '<div class="loading">检查中…</div>';
+  var disabled = Object.keys(SC_DISABLED).filter(function(k){ return SC_DISABLED[k]; });
+  try{
+    var r = await ZT.post('/api/v1/tools/static-check', {
+      code: code,
+      filename: document.getElementById('sc-filename').value || null,
+      language: document.getElementById('sc-lang').value || null,
+      disabled: disabled.length ? disabled : null
+    });
+    var s = r.summary;
+    if (!r.issues.length){
+      box.innerHTML = '<div class="note">没扫出规范问题——注意：检查通过不等于逻辑正确，测试才是行为的裁判。接下来在左边写两个用例试试。</div>';
+      return;
+    }
+    var sevName = { error: '错误', warn: '警告', info: '提示' };
+    var sevCls  = { error: 'rd', warn: 'wn', info: 'mu' };
+    box.innerHTML =
+      '<div class="rowflex gap8 mb12">' +
+      '<span class="pill n">共 ' + s.totalIssues + ' 处</span>' +
+      '<span class="pill">错误 ' + s.bySeverity.error + '</span>' +
+      '<span class="pill">警告 ' + s.bySeverity.warn + '</span>' +
+      '<span class="pill">提示 ' + s.bySeverity.info + '</span>' +
+      '<span class="pill">语言 ' + s.language + '</span>' +
+      '<span class="pill">启用规则 ' + s.rulesApplied + '/' + s.rulesTotal + '</span></div>' +
+      '<div class="tbl-wrap"><table><thead><tr><th>位置</th><th>规则</th><th>级别</th><th>线索</th></tr></thead><tbody>' +
+      r.issues.slice(0, 30).map(function(i){
+        return '<tr><td>第 ' + i.line + ' 行' + (i.col ? ' 第 ' + i.col + ' 列' : '') + '</td><td>' + ZT.esc(i.name) + '</td>' +
+          '<td><span class="pill ' + (sevCls[i.severity]||'') + '">' + sevName[i.severity] + '</span></td>' +
+          '<td>' + (i.detail ? ZT.esc(i.detail) + '<br>' : '') +
+            '<span class="nt muted">' + ZT.esc(i.excerpt) + '</span><br>' +
+            '<span class="nt">' + ZT.esc(i.guidance) + '</span></td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<div class="note mt12">' + ZT.esc(r.note) + '</div>';
+  }catch(e){ box.innerHTML = '<div class="empty">' + ZT.esc(e.message) + '</div>'; }
+}
+
+async function runUnitTests(){
+  var test = document.getElementById('ut-code').value;
+  if (!test.trim()){ ZT.toast('先写测试文件——我不替你写（FR-204 红线）', 'err'); return; }
+  var files = [{ name: 'test.js', content: test }];
+  var src = document.getElementById('ut-src').value;
+  if (src.trim()) files.push({ name: 'code.js', content: src });
+  var box = document.getElementById('ut-result');
+  box.innerHTML = '<div class="loading">沙箱运行中…（最长 15 秒）</div>';
+  try{
+    var r = await ZT.post('/api/v1/tools/run-tests', {
+      files: files, entry: 'test.js', coverage: document.getElementById('ut-cov').checked
+    });
+    var head = '<div class="rowflex gap8 mb12">' +
+      '<span class="pill ' + (r.ok ? 'g' : 'n') + '">' + (r.ok ? '全部通过' : (r.timedOut ? '执行超时' : '存在失败')) + '</span>' +
+      '<span class="pill">用例 ' + r.tests + '</span>' +
+      '<span class="pill">通过 ' + r.pass + '</span>' +
+      '<span class="pill">失败 ' + r.fail + '</span>' +
+      '<span class="pill">耗时 ' + (r.durationMs || 0) + 'ms</span></div>';
+    if (r.coverage && r.coverage.totalLinePercent !== null){
+      head += '<div class="note">行覆盖率 ' + r.coverage.totalLinePercent + '%。覆盖率是结果不是目标——先弄清失败原因，再谈百分比。</div>';
+    }
+    var fails = '';
+    if (r.failures && r.failures.length){
+      fails = '<div class="tbl-wrap"><table><thead><tr><th>失败用例</th><th>位置提示</th><th>错误线索</th></tr></thead><tbody>' +
+        r.failures.map(function(f){
+          return '<tr><td>' + ZT.esc(f.name) + '</td>' +
+            '<td>' + ((f.hints && f.hints.length) ? f.hints.map(ZT.esc).join('<br>') : '—') + '</td>' +
+            '<td><code style="white-space:pre-wrap">' + ZT.esc((f.error||'').slice(0,300)) + '</code></td></tr>';
+        }).join('') + '</tbody></table></div>';
+    }
+    var cases = '';
+    if (r.cases && r.cases.length){
+      cases = '<details class="mt8"><summary style="cursor:pointer;font-size:13px" class="faint">逐用例明细（' + r.cases.length + ' 个）</summary>' +
+        '<div class="tbl-wrap mt8"><table><thead><tr><th>#</th><th>用例</th><th>结果</th></tr></thead><tbody>' +
+        r.cases.map(function(c, idx){
+          return '<tr><td>' + (idx + 1) + '</td><td>' + ZT.esc(c.name) + '</td>' +
+            '<td>' + (c.skipped ? '<span class="pill w">跳过</span>' : (c.ok ? '<span class="pill g">通过</span>' : '<span class="pill n">失败</span>')) + '</td></tr>';
+        }).join('') + '</tbody></table></div></details>';
+    }
+    box.innerHTML = head + fails + cases + '<div class="note mt12">' + ZT.esc(r.note) + '</div>';
+  }catch(e){ box.innerHTML = '<div class="empty">' + ZT.esc(e.message) + '</div>'; }
+}
+
+async function loadGit(){
+  var box = document.getElementById('git-view');
+  try{
+    var r = await ZT.get('/api/v1/student/git');
+    if (!r.hasGroup || !r.analysis || !r.analysis.count){
+      box.innerHTML = '<div class="empty">本组还没有提交记录。老师登记仓库并同步后（或在对话里粘贴 git log 导入），这里会展示轨迹分析。</div>';
+      return;
+    }
+    var a = r.analysis;
+    var mets = '<div class="mets" style="grid-template-columns:repeat(4,1fr);gap:8px">' +
+      '<div class="met" style="padding:8px 4px"><b style="font-size:18px">' + a.count + '</b><span>总提交</span></div>' +
+      '<div class="met" style="padding:8px 4px"><b style="font-size:18px">' + a.activeDays + '</b><span>活跃天</span></div>' +
+      '<div class="met" style="padding:8px 4px"><b style="font-size:18px">' + a.perDay + '</b><span>次/活跃日</span></div>' +
+      '<div class="met" style="padding:8px 4px"><b style="font-size:18px">' + (a.daysSinceLast===null?'-':a.daysSinceLast+'天') + '</b><span>距上次提交</span></div></div>';
+    var mq = a.messageQuality || {};
+    var extra = '';
+    if (mq.typeDistribution){
+      var types = Object.entries(mq.typeDistribution).map(function(x){ return x[0] + '×' + x[1]; }).join('　');
+      extra += '<div class="note" style="margin-top:8px">提交信息：' + ZT.esc(types || '—') +
+        '　规范符合率 ' + Math.round((mq.conventionalRatio||0) * 100) + '%（feat/fix 等类型前缀）</div>';
+    }
+    if (a.codeVolume && a.codeVolume.hasStats){
+      extra += '<div class="note" style="margin-top:6px">本组代码量：+' + a.codeVolume.additions + ' 行 / -' + a.codeVolume.deletions + ' 行 / 改动文件 ' + a.codeVolume.filesChanged + ' 个</div>';
+    }
+    var rhythms = a.rhythms.length
+      ? '<div class="note" style="margin-top:10px">' + a.rhythms.map(function(x){return ZT.esc(x.text)}).join('；') + '</div>'
+      : '';
+    var members = '<h3 style="margin-top:14px">成员分布<span class="sub">只列事实，不评分</span></h3><ul class="inv">' +
+      a.members.map(function(m){
+        return '<li><span class="mk ok">✓</span><span>' + ZT.esc(m.author) + ' 提交 ' + m.count + ' 次' +
+          ' / 活跃 ' + (m.activeDays || '-') + ' 天' +
+          (m.additions || m.deletions ? ' / +' + m.additions + ' -' + m.deletions : '') +
+          (m.lowInfo ? '（其中 ' + m.lowInfo + ' 条提交信息信息量不足）' : '') + '</span></li>';
+      }).join('') + '</ul>';
+    var commits = '<h3 style="margin-top:14px">最近提交</h3><div class="tbl-wrap" style="max-height:240px;overflow:auto"><table><thead><tr><th>时间</th><th>作者</th><th>提交信息</th></tr></thead><tbody>' +
+      a.commits.slice(0,15).map(function(c){
+        return '<tr><td>' + ZT.ts(c.committedAt) + '</td><td>' + ZT.esc(c.author) + '</td><td>' + ZT.esc(c.message.slice(0,60)) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    box.innerHTML = mets + extra + rhythms + members + commits +
+      '<div class="note mt12" style="font-size:12px">' + ZT.esc(r.note) + '</div>';
+  }catch(e){ box.innerHTML = '<div class="empty">' + ZT.esc(e.message) + '</div>'; }
+}
+
+async function loadToolRuns(){
+  var box = document.getElementById('tool-runs');
+  try{
+    var r = await ZT.get('/api/v1/tools/my-runs');
+    if (!r.runs.length){ box.innerHTML = '<div class="empty">暂无记录——用一次静态检查或单测执行就会出现在这里。</div>'; return; }
+    box.innerHTML = '<div class="tbl-wrap"><table><thead><tr><th>工具</th><th>结果</th><th>摘要</th><th>时间</th></tr></thead><tbody>' +
+      r.runs.map(function(x){
+        var s = x.summary || {};
+        var brief = x.tool === 'static'
+          ? (s.issues || 0) + ' 处问题'
+          : x.tool === 'unittest'
+            ? '通过 ' + (s.pass||0) + ' / 失败 ' + (s.fail||0)
+            : JSON.stringify(s).slice(0, 40);
+        return '<tr><td>' + ZT.esc(x.toolName || x.tool) + '</td>' +
+          '<td>' + (x.ok ? '<span class="pill g">正常</span>' : '<span class="pill n">异常</span>') + '</td>' +
+          '<td>' + ZT.esc(brief) + '</td><td>' + ZT.ts(x.created_at) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }catch(e){ box.innerHTML = '<div class="empty">' + ZT.esc(e.message) + '</div>'; }
+}
+
+/* ==================== 团队协作（M3） ==================== */
+var TEAM = { standupId: null, rpId: null };
+
+async function loadTeam(){
+  loadTeamProgress();
+  openStandup();
+  loadTodos();
+  loadPeerFacts();
+  loadRetro();
+}
+
+async function openStandup(){
+  try {
+    var r = await ZT.post('/api/v1/team/standups', {});
+    TEAM.standupId = r.standupId;
+    document.getElementById('standup-date').textContent = r.date + (r.created ? '（新开启）' : '');
+    var p = r.prompt || {};
+    document.getElementById('standup-facts').innerHTML =
+      '<div class="tbl-wrap"><table><thead><tr><th>组员</th><th>近48h提交</th><th>最近提交信息</th></tr></thead><tbody>' +
+      (p.facts||[]).map(function(f){
+        return '<tr><td>'+ZT.esc(f.name)+'</td><td>'+f.commits48h+'</td><td class="faint">'+ZT.esc((f.recentMessages||[])[0]||'—')+'</td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<div class="note" style="margin-top:8px">三问：'+ (p.questions||[]).map(ZT.esc).join('　') +'</div>';
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function submitStandup(){
+  if(!TEAM.standupId){ ZT.toast('先开启今日站会','err'); return; }
+  try {
+    var r = await ZT.post('/api/v1/team/standups/'+TEAM.standupId+'/answer', {
+      yesterday: document.getElementById('su-y').value,
+      today: document.getElementById('su-t').value,
+      blocker: document.getElementById('su-b').value
+    });
+    document.getElementById('su-result').innerHTML =
+      '<div class="note '+(r.vague?'w':'g')+'">'+ (r.vague? '追问：':'') + ZT.esc(r.followUp) +'</div>';
+    loadTodos();
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function loadTodos(){
+  try {
+    var r = await ZT.get('/api/v1/team/todos');
+    document.getElementById('todos-view').innerHTML = r.todos.length
+      ? '<div class="tbl-wrap"><table><thead><tr><th>待办</th><th>来源</th><th>状态</th><th></th></tr></thead><tbody>' +
+        r.todos.map(function(t){
+          return '<tr><td>'+ZT.esc(t.text)+'</td><td class="faint">'+(t.source==='standup'?'站会阻碍':'复盘行动')+'</td>'+
+            '<td>'+(t.status==='done'?'<span class="pill g">已完成</span>':'<span class="pill w">未完成</span>')+'</td>'+
+            '<td>'+(t.status==='open'?'<button class="btn xs" data-td="'+t.id+'">完成</button>':'')+'</td></tr>';
+        }).join('') + '</tbody></table></div>'
+      : '<div class="empty">暂无待办</div>';
+    document.querySelectorAll('#todos-view button[data-td]').forEach(function(b){
+      b.onclick = async function(){
+        await ZT.post('/api/v1/team/todos/'+b.dataset.td+'/done', {});
+        loadTodos();
+      };
+    });
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function startRoleplay(){
+  try {
+    var role = document.getElementById('rp-role').value;
+    var r = await ZT.post('/api/v1/team/roleplays', { role: role });
+    TEAM.rpId = r.id;
+    document.getElementById('rp-chat').innerHTML =
+      '<div style="margin-bottom:6px"><b>['+ZT.esc(r.roleName)+']</b> '+ZT.esc(r.scenario)+'</div>';
+    document.getElementById('rp-result') && (document.getElementById('rp-result').innerHTML='');
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+function rpAdd(who, text, me){
+  var div = document.createElement('div');
+  div.style.marginBottom = '6px';
+  div.innerHTML = '<b>['+(me?'我':who)+']</b> '+ZT.esc(text);
+  document.getElementById('rp-chat').appendChild(div);
+  document.getElementById('rp-chat').scrollTop = 99999;
+}
+
+async function rpSend(){
+  var inp = document.getElementById('rp-inp');
+  var text = inp.value.trim();
+  if(!TEAM.rpId){ ZT.toast('先开始一场扮演','err'); return; }
+  if(!text) return;
+  inp.value = '';
+  rpAdd('', text, true);
+  try {
+    var r = await ZT.post('/api/v1/team/roleplays/'+TEAM.rpId+'/turn', { text: text });
+    rpAdd('对方', r.reply);
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function rpEnd(){
+  if(!TEAM.rpId){ ZT.toast('先开始一场扮演','err'); return; }
+  try {
+    var r = await ZT.post('/api/v1/team/roleplays/'+TEAM.rpId+'/turn', { end: true });
+    var f = r.feedback || {};
+    var html = '<div class="card" style="border:1px solid var(--bd)"><b>观察反馈</b>（'+ZT.esc(f.roleName||'')+' · '+f.turns+' 轮 · 你提了 '+f.clarifying+' 个澄清问题）'+
+      (f.missed && f.missed.length ? '<div class="note w" style="margin-top:6px">未澄清的维度：'+f.missed.map(ZT.esc).join('、')+'</div>' : '')+
+      '<ul style="margin:8px 0 0 18px">'+(f.suggestions||[]).map(function(s){ return '<li>'+ZT.esc(s)+'</li>'; }).join('')+'</ul>'+
+      '<div class="faint" style="margin-top:6px">'+ZT.esc(f.note||'')+'</div></div>';
+    document.getElementById('rp-chat').innerHTML += '<hr style="margin:10px 0">' + html;
+    document.getElementById('rp-chat').scrollTop = 99999;
+    TEAM.rpId = null;
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function loadPeerFacts(){
+  try {
+    var r = await ZT.get('/api/v1/team/peer-review/facts');
+    document.getElementById('pr-facts').innerHTML =
+      '<details><summary class="faint" style="cursor:pointer">展开本组事实清单（只列事实，不评分）</summary>' +
+      r.members.map(function(m){
+        return '<div style="margin:8px 0"><b>'+ZT.esc(m.name)+(m.isLeader?'（组长）':'')+'</b><ul style="margin:4px 0 0 18px">'+
+          m.facts.map(function(f){ return '<li class="faint">'+ZT.esc(f)+'</li>'; }).join('')+'</ul></div>';
+      }).join('') + '</details>';
+    document.getElementById('pr-target').innerHTML = r.members.map(function(m){
+      return '<option value="'+m.studentId+'">'+ZT.esc(m.name)+'</option>';
+    }).join('');
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function submitReview(){
+  try {
+    var r = await ZT.post('/api/v1/team/peer-review', {
+      revieweeId: document.getElementById('pr-target').value,
+      note: document.getElementById('pr-note').value
+    });
+    document.getElementById('pr-result').innerHTML =
+      '<div class="note '+(r.vague?'w':'g')+'">'+ZT.esc(r.followUp)+'</div>';
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function submitRetro(){
+  try {
+    var r = await ZT.post('/api/v1/team/retro', {
+      good: document.getElementById('rt-good').value,
+      improve: document.getElementById('rt-improve').value,
+      action: document.getElementById('rt-action').value
+    });
+    var study = (r.studyList||[]).map(function(s){ return '<li>'+ZT.esc(s.knowledge)+'（'+s.stuckStudents+' 人卡过）</li>'; }).join('');
+    document.getElementById('rt-result').innerHTML =
+      '<div class="note g">'+ZT.esc(r.todoHint||'已记录')+'</div>'+
+      (study ? '<div class="mt8"><b>补学清单（卡点倒推）</b><ul style="margin:4px 0 0 18px">'+study+'</ul></div>' : '');
+  } catch(e){ ZT.toast(e.message,'err'); }
+}
+
+async function loadRetro(){
+  try {
+    var r = await ZT.get('/api/v1/team/retro');
+    if(r.retro){
+      document.getElementById('rt-good').value = r.retro.good || '';
+      document.getElementById('rt-improve').value = r.retro.improve || '';
+      document.getElementById('rt-action').value = r.retro.action || '';
+    }
+  } catch(e){ /* 静默 */ }
+}
+
+boot();
+</script>
+</body>
+</html>

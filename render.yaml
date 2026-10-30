@@ -1,0 +1,23 @@
+# Render 部署配置（免费层）
+# 用法：在 Render 面板 New → Web Service → 选择本仓库后，可“Import an existing render.yaml”
+# 或手动按下面的字段填写。
+services:
+  - type: web
+    name: zhitu-banxue
+    runtime: node
+    plan: free                 # 免费层：750 实例小时/月、512MB RAM、休眠后冷启动约 1 分钟
+    region: singapore          # 离国内近一点；可选 oregon / frankfurt 等
+    branch: main
+    buildCommand: npm install  # 零第三方依赖，空跑即可；保留以便 Render 识别 Node 项目
+    startCommand: npm start    # 即 node server/index.js（已内置“空库自动 seed”自愈）
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.5.0
+      - key: ZHITU_LOG         # 云上把请求日志关掉，减少干扰；本地默认开慢请求日志
+        value: "0"
+    # 说明：
+    # 1) data/ 已被 .gitignore 排除，含明文 API Key 的 llm.json 与学生数据不会进仓库。
+    # 2) 云上默认无 Key → 自动走内置规则引擎兜底（对话可用、能演示）。
+    # 3) 真模型（学校 DeepSeek 网关）仅限校园网/VPN，云上连不上，故为兜底版。
+    # 4) 临时盘每次休眠/重启会重置数据库，服务启动时自动 re-seed，演示账号始终可用。

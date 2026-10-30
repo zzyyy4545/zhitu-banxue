@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>知途伴学 · 移动端（多端同步演示）</title>
+<style>
+  :root { --bd:#E4E0D6; --fg:#2C2C2A; --faint:#8A857A; --bg:#F6F4EE; --card:#FFFFFF; --acc:#3E5F2E; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--fg); }
+  .wrap { max-width:520px; margin:0 auto; padding:12px; }
+  .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:14px; margin-bottom:12px; }
+  h3 { font-size:15px; margin-bottom:8px; }
+  .faint { color:var(--faint); font-size:12px; }
+  input,select,textarea { font:inherit; padding:9px 10px; border:1px solid var(--bd); border-radius:8px; width:100%; }
+  .row { display:flex; gap:8px; margin-bottom:8px; }
+  .row>* { flex:1; }
+  button { font:inherit; background:var(--acc); color:#fff; border:none; border-radius:8px; padding:9px 14px; cursor:pointer; }
+  button.gh { background:transparent; color:var(--acc); border:1px solid var(--acc); }
+  #msgs { max-height:46vh; overflow:auto; border:1px solid var(--bd); border-radius:10px; padding:10px; background:#FBFAF7; }
+  .m { margin-bottom:8px; padding:8px 10px; border-radius:10px; font-size:13px; }
+  .m.me { background:#E8F0DF; margin-left:15%; }
+  .m.ag { background:#fff; margin-right:15%; border:1px solid var(--bd); }
+  .m .who { font-size:11px; color:var(--faint); }
+  .stat { display:inline-block; background:#EFEDE5; border-radius:6px; padding:2px 8px; font-size:12px; margin-right:6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h3>知途伴学 · 移动端 H5 <span class="faint">FR-404 多端接入演示</span></h3>
+    <div class="row" id="login-row">
+      <input id="u" placeholder="学号/账号（如 s001）" value="s001">
+      <input id="p" type="password" placeholder="密码" value="123456">
+      <button id="btn-login" style="flex:0 0 auto">登录</button>
+    </div>
+    <div class="row" id="dev-row" style="display:none">
+      <button class="gh" id="btn-dev">注册本机为设备</button>
+      <button class="gh" id="btn-sync">增量同步</button>
+      <button class="gh" id="btn-catchup">模拟离线补收</button>
+    </div>
+    <div id="stat" class="faint" style="margin:6px 0">未登录。登录后本端与 Web 端共享同一会话与上下文。</div>
+  </div>
+
+  <div class="card" id="chat-card" style="display:none">
+    <h3>伴学对话 <span class="faint" id="stage-info"></span></h3>
+    <div id="msgs"></div>
+    <div class="row" style="margin-top:8px">
+      <input id="text" placeholder="向知途提问……" style="flex:3">
+      <button id="btn-send" style="flex:1">发送</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* 移动端轻客户端：登录 → 注册设备（长期 device_token）→ 增量同步 → 发消息
+   与 Web 端走同一套会话服务（/api/v1/open/*），验证多端消息顺序一致与离线补收。 */
+var S = { token:null, deviceToken:null, deviceId:null, cursor:0, sessionId:null };
+
+function stat(html){ document.getElementById('stat').innerHTML = html; }
+
+async function api(method, url, body, token){
+  var res = await fetch(url, {
+    method: method,
+    headers: { 'Content-Type':'application/json', Authorization:'Bearer '+(token||S.deviceToken||S.token||'') },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  var data = await res.json().catch(function(){ return {}; });
+  if(!res.ok) throw new Error(data.error || ('HTTP '+res.status));
+  return data;
+}
+
+document.getElementById('btn-login').onclick = async function(){
+  try{
+    var r = await api('POST','/api/v1/auth/login',{ username:document.getElementById('u').value.trim(), password:document.getElementById('p').value });
+    S.token = r.token;
+    document.getElementById('login-row').style.display='none';
+    document.getElementById('dev-row').style.display='';
+    document.getElementById('chat-card').style.display='';
+    stat('已登录：'+r.user.name+'。点「注册本机为设备」换取长期令牌（小程序/插件同此流程）。');
+    await registerDevice();
+  }catch(e){ stat('<b style="color:#A32D2D">'+e.message+'</b>'); }
+};
+
+async function registerDevice(){
+  var r = await api('POST','/api/v1/open/devices',{ deviceType:'h5', name:'手机浏览器' }, S.token);
+  S.deviceToken = r.deviceToken; S.deviceId = r.deviceId;
+  stat('设备已注册（'+r.deviceId.slice(0,12)+'…）。此后本端用设备令牌长期访问，无需重复登录。<br>当前游标 seq=0，点「增量同步」拉取全部历史。');
+  await sync(0);
+}
+
+document.getElementById('btn-dev').onclick = registerDevice;
+
+document.getElementById('btn-sync').onclick = function(){ sync(S.cursor); };
+
+document.getElementById('btn-catchup').onclick = function(){ sync(0); };
+
+async function sync(since){
+  if(!S.deviceToken){ stat('请先登录并注册设备'); return; }
+  var r = await api('GET','/api/v1/open/sync?since='+since, null, S.deviceToken);
+  var before = S.cursor;
+  S.cursor = r.cursor;
+  if(r.messages.length){
+    var box = document.getElementById('msgs');
+    r.messages.forEach(function(m){
+      var div = document.createElement('div');
+      div.className = 'm '+(m.role==='student'?'me':'ag');
+      div.innerHTML = '<div class="who">#'+m.seq+' · '+(m.role==='agent'?'知途':m.role==='student'?'我':'系统')+' · '+String(m.created_at).slice(11,16)+'</div>'+String(m.content).slice(0,300).replace(/</g,'&lt;');
+      box.appendChild(div);
+      S.sessionId = m.session_id;
+      box.scrollTop = 99999;
+    });
+  }
+  stat('<span class="stat">seq → '+S.cursor+'</span><span class="stat">本次拉到 '+r.messages.length+' 条</span>'+
+    '<span class="stat">未读触达 '+r.unreadOutreach+'</span>'+
+    (before===0&&S.cursor>0 ? '（离线补收完成：全量 '+S.cursor+' 条按 seq 有序补齐，与 Web 端一致）' : '（增量：只拉新消息，无重复）'));
+  if(S.deviceId) api('POST','/api/v1/open/sync/ack',{ deviceId:S.deviceId, seq:S.cursor }, S.deviceToken).catch(function(){});
+}
+
+document.getElementById('btn-send').onclick = async function(){
+  var inp = document.getElementById('text');
+  var t = inp.value.trim();
+  if(!t) return;
+  if(!S.sessionId){ stat('先同步一次，取得会话'); return; }
+  inp.value='';
+  var div = document.createElement('div');
+  div.className='m me'; div.innerHTML='<div class="who">我</div>'+t.replace(/</g,'&lt;');
+  document.getElementById('msgs').appendChild(div);
+  try{
+    var r = await api('POST','/api/v1/open/sessions/'+S.sessionId+'/messages',{ text:t }, S.deviceToken);
+    document.getElementById('stage-info').textContent = 'L'+(r.session.level||0)+' · '+r.context.stage;
+    await sync(S.cursor);
+  }catch(e){ stat('<b style="color:#A32D2D">'+e.message+'</b>'); }
+};
+document.getElementById('text').onkeydown = function(e){ if(e.key==='Enter') document.getElementById('btn-send').click(); };
+</script>
+</body>
+</html>
